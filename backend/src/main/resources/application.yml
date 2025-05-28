@@ -1,4 +1,20 @@
+server:
+  servlet:
+    context-path: /api
+  port: 8080
+
 spring:
-  autoconfigure:
-    exclude:
-      - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/${DATABASE}?serverTimezone=Asia/Seoul
+    username: ${MYSQL_ID}
+    password: ${MYSQL_PASSWORD}
+
+  jpa:
+    show-sql: true
+    database-platform: org.hibernate.dialect.MySQL8Dialect
+    hibernate:
+      ddl-auto: create
+    properties:
+      hibernate:
+        format_sql: true
