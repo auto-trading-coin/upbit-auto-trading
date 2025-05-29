@@ -1,4 +1,4 @@
 package com.autric.upbit.domain.chart.entity;
 
-public class ChartEntity {
+public class Chart30m {
 }
