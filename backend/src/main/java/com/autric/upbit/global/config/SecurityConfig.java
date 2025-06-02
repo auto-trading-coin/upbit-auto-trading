@@ -1,0 +1,45 @@
+package com.autric.upbit.global.config;
+
+import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
+import org.springframework.security.oauth2.client.userinfo.OAuth2UserService;
+import org.springframework.security.oauth2.core.user.OAuth2User;
+import org.springframework.security.web.SecurityFilterChain;
+
+@Configuration
+@EnableWebSecurity  // Spring Security 활성화
+@RequiredArgsConstructor
+public class SecurityConfig {
+
+    // 사용자 정보를 후처리할 커스텀 서비스
+    private final OAuth2UserService<OAuth2UserRequest, OAuth2User> oAuth2UserService;
+
+    @Bean
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        http
+                .csrf(AbstractHttpConfigurer::disable)
+                .formLogin(AbstractHttpConfigurer::disable)
+                .httpBasic(AbstractHttpConfigurer::disable)
+
+                // URL 접근 권한 설정
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/", "/login/**", "/css/**", "/js/**").permitAll() // 공개 허용
+                        .anyRequest().authenticated() // 그 외에는 인증 필요
+                )
+
+                // 소셜 로그인 설정
+                .oauth2Login(oauth2 -> oauth2
+                        .userInfoEndpoint(userInfo -> userInfo
+                                .userService(oAuth2UserService) // 사용자 정보 받아오는 커스텀 로직 등록
+                        )
+                );
+
+        return http.build();  // 필터 체인 빌드 후 반환
+    }
+}
+
