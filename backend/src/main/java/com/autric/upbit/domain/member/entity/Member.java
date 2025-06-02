@@ -19,7 +19,7 @@ public class Member {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "member_id")
-    private Integer id;
+    private Long id;
 
     /**
      * 전략ID FK
@@ -49,8 +49,8 @@ public class Member {
     /**
      * 소셜 로그인 id
      */
-    @Column(name = "provider_id", length = 50)
-    private String providerId;
+    @Column(name = "provider_id")
+    private Long providerId;
 
     /**
      * 자동매매 적용 여부
@@ -71,7 +71,7 @@ public class Member {
     private String secretKey;
 
     @Builder
-    public Member(Strategy strategy, String email, String nickname, String provider, String providerId, Boolean tradeActive, String accessKey, String secretKey) {
+    public Member(Strategy strategy, String email, String nickname, String provider, Long providerId, Boolean tradeActive, String accessKey, String secretKey) {
         this.strategy = strategy;
         this.email = email;
         this.nickname = nickname;

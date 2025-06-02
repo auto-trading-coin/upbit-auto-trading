@@ -19,7 +19,7 @@ public class Strategy {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "strategy_id")
-    private Integer id;
+    private Long id;
 
     /**
      * 전략 이름
