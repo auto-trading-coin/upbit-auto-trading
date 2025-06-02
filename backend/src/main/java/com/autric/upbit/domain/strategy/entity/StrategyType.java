@@ -10,15 +10,15 @@ public enum StrategyType {
     MEAN_REVERSION("평균회귀형"),
     CONTRA_TREND("추세역추종형");
 
-    private final String label;
+    private final String value;
 
-    StrategyType(String label) {
-        this.label = label;
+    StrategyType(String value) {
+        this.value = value;
     }
 
     @JsonValue
-    public String getLabel() {
-        return label;
+    public String getValue() {
+        return value;
     }
 
 }
