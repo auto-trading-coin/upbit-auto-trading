@@ -22,7 +22,7 @@ public class Chart30m {
     @JoinColumn(name = "market_id")
     private Market market;  // ex: KRW-BTC
 
-    @Column(name = "candle_date_time_kst", nullable = false)
+    @Column(name = "candle_date_time_kst")
     private LocalDateTime candleDateTimeKst;
 
     @Column(name = "opening_price", precision = 24, scale = 12)
@@ -37,7 +37,6 @@ public class Chart30m {
     @Column(name = "trade_price", precision = 24, scale = 12)
     private BigDecimal tradePrice;
 
-    @Column(nullable = false)
     private LocalDateTime timestamp; // 해당 캔들의 마지막 틱 저장 시각
 
     @Column(name = "candle_acc_trade_price", precision = 24, scale = 12)
@@ -46,7 +45,6 @@ public class Chart30m {
     @Column(name = "candle_acc_trade_volume", precision = 24, scale = 12)
     private BigDecimal candleAccTradeVolume;
 
-    @Column(nullable = false)
     private Integer unit;  // ex: 1 (1분), 5 (5분) 등
 
     @Builder
