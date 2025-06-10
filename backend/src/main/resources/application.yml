@@ -14,7 +14,7 @@ spring:
     show-sql: true
     database-platform: org.hibernate.dialect.MySQL8Dialect
     hibernate:
-      ddl-auto: create
+      ddl-auto: update
     properties:
       hibernate:
         format_sql: true
@@ -30,7 +30,7 @@ spring:
             # {baseUrl}은 현재 백엔드 서버 URL로 자동 대체됨
             redirect-uri: "{baseUrl}/login/oauth2/code/kakao"
             authorization-grant-type: authorization_code  # OAuth2 인증 방식: 인가 코드 방식
-            client-authentication-method: POST  # 인증 방식은 POST 방식으로 설정
+            client-authentication-method: client_secret_post
             # 카카오에 요청할 사용자 정보 범위 (scope)
             # 이 설정을 통해 닉네임과 이메일 정보를 가져올 수 있음
             scope: profile_nickname, account_email
@@ -41,6 +41,13 @@ spring:
             token-uri: https://kauth.kakao.com/oauth/token  # 카카오 액세스 토큰 발급 URL
             user-info-uri: https://kapi.kakao.com/v2/user/me  # 액세스 토큰으로 사용자 정보 가져올 URL
             user-name-attribute: id  # 사용자 고유 식별자 키. 카카오는 'id'를 사용함
+
+  jwt:
+    secret: ${JWT_SECRET}
+    # 60 * 30 * 10000ms (30min)
+    access-expired: ${ACCESS_EXPIRED}
+    # 7 * 24 * 60 * 60 * 1000ms (7day)
+    refresh-expired: ${REFRESH_EXPIRED}
 
   devtools:
     restart:

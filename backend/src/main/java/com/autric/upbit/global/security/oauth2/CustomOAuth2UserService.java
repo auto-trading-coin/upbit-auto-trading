@@ -48,6 +48,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
             String email = (String) kakaoAccount.get("email");
             String nickname = (String) profile.get("nickname");
 
+            // DB 조회 후, 회원가입이 되어 있지 않은 유저라면 회원가입
             Member member = memberRepository.findByProviderAndProviderId("kakao", kakaoId)
                     .orElseGet(() -> {
                         Member newMember = Member.builder()

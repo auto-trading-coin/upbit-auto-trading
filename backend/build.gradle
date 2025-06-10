@@ -36,6 +36,11 @@ dependencies {
 	// 소셜 로그인을 위한 시큐리티 및 Oauth 의존성
 	implementation 'org.springframework.boot:spring-boot-starter-security'
 	implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
+
+	// JWT 사용을 위한 의존성
+	implementation 'io.jsonwebtoken:jjwt-api:0.12.6'
+	runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.6'
+	runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.6' // Jackson 기반 파서 사용
 }
 
 tasks.named('test') {

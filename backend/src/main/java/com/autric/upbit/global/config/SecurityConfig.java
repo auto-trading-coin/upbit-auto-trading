@@ -1,5 +1,8 @@
 package com.autric.upbit.global.config;
 
+import com.autric.upbit.global.security.filter.JwtAuthenticationFilter;
+import com.autric.upbit.global.security.jwt.JwtProvider;
+import com.autric.upbit.global.security.oauth2.CustomUserDetailsService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -10,6 +13,7 @@ import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserService;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
 @EnableWebSecurity  // Spring Security 활성화
@@ -19,6 +23,8 @@ public class SecurityConfig {
     // 사용자 정보를 후처리할 커스텀 서비스
     private final OAuth2UserService<OAuth2UserRequest, OAuth2User> oAuth2UserService;
 
+    private final JwtProvider jwtProvider;
+    private final CustomUserDetailsService customUserDetailsService;
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
@@ -37,9 +43,19 @@ public class SecurityConfig {
                         .userInfoEndpoint(userInfo -> userInfo
                                 .userService(oAuth2UserService) // 사용자 정보 받아오는 커스텀 로직 등록
                         )
-                );
+                )
+                /**
+                 * jwtAuthenticationFilter를 UsernamePasswordAuthenticationFilter 앞에 배치
+                 * formLogin을 disable 했으므로 UsernamePasswordAuthenticationFilter는 동작하지 않음
+                 */
+                .addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
 
         return http.build();  // 필터 체인 빌드 후 반환
+    }
+
+    @Bean
+    public JwtAuthenticationFilter jwtAuthenticationFilter() {
+        return new JwtAuthenticationFilter(jwtProvider, customUserDetailsService);
     }
 }
 
