@@ -31,7 +31,7 @@ public class Chart1d {
     /**
      * 캔들 기준 시각(KST기준)
      */
-    @Column(name = "candle_date_time_kst", nullable = false)
+    @Column(name = "candle_date_time_kst")
     private LocalDateTime candleDateTimeKst;
 
     /**
@@ -61,7 +61,6 @@ public class Chart1d {
     /**
      * 해당 캔들에서 마지막 틱이 저장된 시각
      */
-    @Column(nullable = false)
     private LocalDateTime timestamp; // 해당 캔들의 마지막 틱 저장 시각
 
     /**
@@ -79,7 +78,6 @@ public class Chart1d {
     /**
      * 봉 단위
      */
-    @Column(nullable = false)
     private Integer unit;  // ex: 1 (1분), 5 (5분) 등
 
     @Builder
