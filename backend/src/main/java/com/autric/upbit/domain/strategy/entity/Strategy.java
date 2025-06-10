@@ -45,7 +45,7 @@ public class Strategy {
     private StrategyType strategyType;
 
     @Builder
-    public Strategy(Integer id, String name, String information, String conditions, StrategyType strategyType) {
+    public Strategy(String name, String information, String conditions, StrategyType strategyType) {
         this.name = name;
         this.information = information;
         this.conditions = conditions;

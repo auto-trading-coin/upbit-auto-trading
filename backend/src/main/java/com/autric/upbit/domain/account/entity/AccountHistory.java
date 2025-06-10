@@ -30,7 +30,7 @@ public class AccountHistory extends BaseTimeEntity {
      * 멤버ID FK
      */
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "strategy_id")
+    @JoinColumn(name = "member_id")
     private Member member;
 
     /**
