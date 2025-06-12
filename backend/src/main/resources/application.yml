@@ -44,9 +44,7 @@ spring:
 
   jwt:
     secret: ${JWT_SECRET}
-    # 60 * 30 * 10000ms (30min)
     access-expired: ${ACCESS_EXPIRED}
-    # 7 * 24 * 60 * 60 * 1000ms (7day)
     refresh-expired: ${REFRESH_EXPIRED}
 
   devtools:

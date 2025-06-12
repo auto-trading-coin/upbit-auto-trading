@@ -6,11 +6,15 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
-
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
 
+/**
+ * JWT 토큰의 생성, 검증, 파싱 등을 담당하는 유틸리티 클래스
+ * AccessToken / RefreshToken 발급
+ * 토큰 유효성 검증 및 사용자 식별자 추출
+ */
 @Component
 public class JwtProvider {
     private final SecretKey secret;
@@ -26,8 +30,8 @@ public class JwtProvider {
      */
     public JwtProvider(
             @Value("${jwt.secret}") String secret,
-            @Value("${jwt.access-expired}") long accessTokenValidity,
-            @Value("${jwt.refresh-expired}") long refreshTokenValidity
+            @Value("${access-expired}") long accessTokenValidity,
+            @Value("${refresh-expired}") long refreshTokenValidity
     ) {
         this.secret = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
         this.accessTokenValidity = accessTokenValidity;
@@ -35,9 +39,9 @@ public class JwtProvider {
     }
 
     // 액세스 토큰 발급
-    public String createAccessToken(Long userId) {
+    public String createAccessToken(Long memberId) {
         return Jwts.builder()
-                .subject(String.valueOf(userId))
+                .subject(String.valueOf(memberId))
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + accessTokenValidity))
                 .signWith(secret)
@@ -45,9 +49,9 @@ public class JwtProvider {
     }
 
     // 리프레시 토큰 발급
-    public String createRefreshToken(Long userId) {
+    public String createRefreshToken(Long memberId) {
         return Jwts.builder()
-                .subject(String.valueOf(userId))
+                .subject(String.valueOf(memberId))
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + refreshTokenValidity))
                 .signWith(secret)
@@ -82,7 +86,7 @@ public class JwtProvider {
         }
     }
 
-    // 만료 여부 확인
+    // 토큰 만료 여부 확인
     public boolean isTokenExpired(String token) {
         try {
             Date expiration = Jwts.parser()

@@ -1,8 +1,8 @@
 package com.autric.upbit.global.config;
 
 import com.autric.upbit.global.security.filter.JwtAuthenticationFilter;
+import com.autric.upbit.global.security.handler.OAuth2AuthenticationSuccessHandler;
 import com.autric.upbit.global.security.jwt.JwtProvider;
-import com.autric.upbit.global.security.oauth2.CustomUserDetailsService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -24,7 +24,7 @@ public class SecurityConfig {
     private final OAuth2UserService<OAuth2UserRequest, OAuth2User> oAuth2UserService;
 
     private final JwtProvider jwtProvider;
-    private final CustomUserDetailsService customUserDetailsService;
+    private final OAuth2AuthenticationSuccessHandler oAuth2AuthenticationSuccessHandler;
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
@@ -34,7 +34,7 @@ public class SecurityConfig {
 
                 // URL 접근 권한 설정
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/", "/login/**", "/css/**", "/js/**").permitAll() // 공개 허용
+                        .requestMatchers("/", "/api/login/**", "/api/oauth2/**", "/css/**", "/js/**").permitAll() // 공개 허용
                         .anyRequest().authenticated() // 그 외에는 인증 필요
                 )
 
@@ -43,6 +43,7 @@ public class SecurityConfig {
                         .userInfoEndpoint(userInfo -> userInfo
                                 .userService(oAuth2UserService) // 사용자 정보 받아오는 커스텀 로직 등록
                         )
+                        .successHandler(oAuth2AuthenticationSuccessHandler)
                 )
                 /**
                  * jwtAuthenticationFilter를 UsernamePasswordAuthenticationFilter 앞에 배치
@@ -55,7 +56,7 @@ public class SecurityConfig {
 
     @Bean
     public JwtAuthenticationFilter jwtAuthenticationFilter() {
-        return new JwtAuthenticationFilter(jwtProvider, customUserDetailsService);
+        return new JwtAuthenticationFilter(jwtProvider);
     }
 }
 
