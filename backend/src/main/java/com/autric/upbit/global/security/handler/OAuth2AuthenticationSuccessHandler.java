@@ -3,13 +3,16 @@ package com.autric.upbit.global.security.handler;
 
 import com.autric.upbit.domain.member.dto.response.LoginResponse;
 import com.autric.upbit.domain.member.entity.Member;
+import com.autric.upbit.domain.oauth.service.JwtService;
 import com.autric.upbit.global.security.jwt.JwtProvider;
 import com.autric.upbit.global.security.oauth2.CustomOAuth2User;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
@@ -27,6 +30,9 @@ public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccess
 
     private final JwtProvider jwtProvider;
     private final ObjectMapper objectMapper;
+    private final JwtService jwtService;
+    @Value("${refresh-expired}")
+    private long refreshTokenExpiration;
 
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws IOException, ServletException {
@@ -39,22 +45,31 @@ public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccess
         String accessToken = jwtProvider.createAccessToken(member.getId());
         String refreshToken = jwtProvider.createRefreshToken(member.getId());
 
+        // Redis에 Refresh Token 저장
+        jwtService.save(member.getId(), refreshToken);
+
         // 로그인 후, 응답 구성
+        // RefreshToken을 HttpOnly 쿠키로 설정
+        Cookie refreshTokenCookie = new Cookie("refreshToken", refreshToken);
+        refreshTokenCookie.setHttpOnly(true);
+        refreshTokenCookie.setSecure(true);
+        refreshTokenCookie.setPath("/");
+        refreshTokenCookie.setMaxAge((int) refreshTokenExpiration / 1000);
+        response.addCookie(refreshTokenCookie);
+
+        // AccessToken + 유저 정보는 JSON으로 응답
         LoginResponse.MemberInfo memberInfo = LoginResponse.MemberInfo.builder()
-                .nickname(member.getNickname())
                 .email(member.getEmail())
+                .nickname(member.getNickname())
                 .tradeActive(member.getTradeActive())
-                .api_key_registered(member.hasApiKey())
-                .strategy_registered(member.hasStrategy())
+                .strategyRegistered(member.hasStrategy())
+                .apiKeyRegistered(member.hasApiKey())
                 .build();
 
         LoginResponse loginResponse = LoginResponse.builder()
                 .accessToken(accessToken)
-                .refreshToken(refreshToken)
                 .member(memberInfo)
                 .build();
-
-        // Redis에 Refresh Token 저장 로직 구현 예정
 
         // JSON 응답 전송
         response.setContentType("application/json");

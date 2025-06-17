@@ -10,13 +10,11 @@ import lombok.Getter;
 @Getter
 public class LoginResponse {
     private String accessToken;
-    private String refreshToken;
     private MemberInfo member;
 
     @Builder
-    public LoginResponse(String accessToken, String refreshToken, MemberInfo member) {
+    public LoginResponse(String accessToken, MemberInfo member) {
         this.accessToken = accessToken;
-        this.refreshToken = refreshToken;
         this.member = member;
     }
 
@@ -26,7 +24,7 @@ public class LoginResponse {
         private String email;
         private String nickname;
         private boolean tradeActive;
-        private boolean strategy_registered;
-        private boolean api_key_registered;
+        private boolean strategyRegistered;
+        private boolean apiKeyRegistered;
     }
 }
