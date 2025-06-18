@@ -1,5 +1,8 @@
 package com.autric.upbit.domain.oauth.service;
 
+import com.autric.upbit.global.security.jwt.JwtProvider;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -13,7 +16,9 @@ import java.util.concurrent.TimeUnit;
 @Service
 @RequiredArgsConstructor
 public class JwtService {
+
     private final StringRedisTemplate redisTemplate;
+    private final JwtProvider jwtProvider;
     private static final String REFRESH_TOKEN_PREFIX = "RT:";  // Refresh Token 약자를 접두어로 키 구분
     @Value("${refresh-expired}")
     private long refreshTokenExpiration;
@@ -62,4 +67,51 @@ public class JwtService {
         String stored = get(memberId);
         return stored != null && stored.equals(refreshToken);
     }
+
+    /**
+     * 클라이언트로부터 전달받은 쿠키에서 Refresh Token을 추출하여
+     * 해당 토큰의 유효성과 Redis 저장값 일치 여부를 검증한 뒤,
+     * Access Token을 재발급하여 반환하는 메서드.
+     *
+     * 예외 상황:
+     * Refresh Token이 없거나 유효하지 않을 경우 RuntimeException 발생
+     * Redis에 저장된 Refresh Token과 일치하지 않을 경우 RuntimeException 발생
+     *
+     * @param request HTTP 요청 객체 (쿠키 접근용)
+     * @return 새로 생성된 Access Token 문자열
+     */
+    public String reissueAccessToken(HttpServletRequest request) {
+        String refreshToken = extractRefreshTokenFromCookie(request);
+        if (refreshToken == null || !jwtProvider.validateToken(refreshToken)) {
+            throw new RuntimeException();
+        }
+
+        Long memberId = jwtProvider.getMemberId(refreshToken);
+
+        if (!isValid(memberId, refreshToken)) {
+//            throw new UnauthorizedException("Refresh token mismatch");
+            throw new RuntimeException();
+        }
+
+        return jwtProvider.createAccessToken(memberId);
+    }
+
+    /**
+     * 요청의 쿠키 배열에서 이름이 "refreshToken"인 쿠키 값을 추출.
+     * 해당 값이 없으면 null 반환.
+     *
+     * @param request HttpServletRequest
+     * @return 쿠키에서 추출한 refreshToken 값 (없으면 null)
+     */
+    private String extractRefreshTokenFromCookie(HttpServletRequest request) {
+        if(request.getCookies() == null) return null;
+
+        for(Cookie cookie: request.getCookies()){
+            if("refreshToken".equals(cookie.getName())){
+                return cookie.getValue();
+            }
+        }
+        return null;
+    }
+
 }
