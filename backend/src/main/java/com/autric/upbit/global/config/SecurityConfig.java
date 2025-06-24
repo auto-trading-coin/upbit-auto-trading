@@ -34,7 +34,7 @@ public class SecurityConfig {
 
                 // URL 접근 권한 설정
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/", "/api/login/**", "/api/oauth2/**", "/css/**", "/js/**").permitAll() // 공개 허용
+                        .requestMatchers("/", "/token/**", "/api/login/**", "/api/oauth2/**", "/css/**", "/js/**").permitAll() // 공개 허용
                         .anyRequest().authenticated() // 그 외에는 인증 필요
                 )
 

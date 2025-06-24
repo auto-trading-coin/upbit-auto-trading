@@ -1,5 +1,7 @@
 package com.autric.upbit.global.security.jwt;
 
+import com.autric.upbit.global.response.code.ErrorCode;
+import com.autric.upbit.global.response.exception.RestApiException;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
@@ -69,7 +71,7 @@ public class JwtProvider {
 
             return Long.parseLong(claims.getSubject());
         } catch (JwtException | NumberFormatException e) {
-            throw new IllegalArgumentException("Invalid JWT token", e);
+            throw new RestApiException(ErrorCode.INVALID_TOKEN);
         }
     }
 
@@ -82,12 +84,18 @@ public class JwtProvider {
                     .parseSignedClaims(token);
             return true;
         } catch (JwtException e) {
-            return false;
+            throw new RestApiException(ErrorCode.INVALID_TOKEN);
         }
     }
 
-    // 토큰 만료 여부 확인
-    public boolean isTokenExpired(String token) {
+    /**
+     * 토큰 만료 여부 확인을 위한 메서드
+     * 토큰 만료 시 예외 반환
+     *
+     * @param token
+     */
+
+    public void isTokenExpired(String token) {
         try {
             Date expiration = Jwts.parser()
                     .verifyWith(secret)
@@ -96,9 +104,11 @@ public class JwtProvider {
                     .getPayload()
                     .getExpiration();
 
-            return expiration.before(new Date());
+            if (expiration.before(new Date())) {
+                throw new RestApiException(ErrorCode.EXPIRED_TOKEN); // 401 Unauthorized
+            }
         } catch (JwtException e) {
-            return true;
+            throw new RestApiException(ErrorCode.INVALID_TOKEN); // 파싱 실패 시
         }
     }
 }

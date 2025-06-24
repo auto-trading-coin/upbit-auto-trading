@@ -23,7 +23,7 @@ public enum SuccessCode implements ResponseCode {
     /*
         TOKEN
      */
-    UPDATE_TOKEN_SUCCESS(HttpStatus.OK, "토큰 재발급에 성공했습니다.");
+    TOKEN_REISSUE_SUCCESS(HttpStatus.OK, "토큰 재발급에 성공했습니다.");
 
     private final HttpStatus httpStatus;
     private final String message;
