@@ -1,5 +1,7 @@
 package com.autric.upbit.domain.oauth.service;
 
+import com.autric.upbit.global.response.code.ErrorCode;
+import com.autric.upbit.global.response.exception.RestApiException;
 import com.autric.upbit.global.security.jwt.JwtProvider;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
@@ -74,8 +76,8 @@ public class JwtService {
      * Access Token을 재발급하여 반환하는 메서드.
      *
      * 예외 상황:
-     * Refresh Token이 없거나 유효하지 않을 경우 RuntimeException 발생
-     * Redis에 저장된 Refresh Token과 일치하지 않을 경우 RuntimeException 발생
+     * Refresh Token이 없거나 유효하지 않을 경우 에러 반환
+     * Redis에 저장된 Refresh Token과 일치하지 않을 경우 에러 반환
      *
      * @param request HTTP 요청 객체 (쿠키 접근용)
      * @return 새로 생성된 Access Token 문자열
@@ -83,14 +85,13 @@ public class JwtService {
     public String reissueAccessToken(HttpServletRequest request) {
         String refreshToken = extractRefreshTokenFromCookie(request);
         if (refreshToken == null || !jwtProvider.validateToken(refreshToken)) {
-            throw new RuntimeException();
+            throw new RestApiException(ErrorCode.INVALID_TOKEN);
         }
 
         Long memberId = jwtProvider.getMemberId(refreshToken);
 
         if (!isValid(memberId, refreshToken)) {
-//            throw new UnauthorizedException("Refresh token mismatch");
-            throw new RuntimeException();
+            throw new RestApiException(ErrorCode.INVALID_TOKEN);
         }
 
         return jwtProvider.createAccessToken(memberId);
