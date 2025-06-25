@@ -39,7 +39,6 @@ public class ChartDeltaSyncExecutor {
     public void execute(ChartSyncMeta syncMeta, Market market, int unit) {
 
         final int count = 200;
-        int totalSyncedCount = 0;
 
         LocalDateTime lastSyncedAt = syncMeta.getLastSyncedAt();
         if (lastSyncedAt == null) {
@@ -64,15 +63,15 @@ public class ChartDeltaSyncExecutor {
                 break;
             }
 
-            log.debug("가져온 캔들 수: {}, toTime 기준 요청: {}", responseList.size(), toTime);
-
+            // 차트 데이터 DB저장
             persistHelper.persistByUnit(responseList, market, unit);
-            totalSyncedCount += responseList.size();
 
+            // 가장 최근 데이터 기준 시각 기억
             if (deltaSyncedLatestTime == null) {
                 deltaSyncedLatestTime = responseList.get(0).getParsedDateTime();
             }
 
+            // 더욱 이전 데이터 불러 오도록 시각 뒤로
             toTime = responseList.get(responseList.size() - 1).getParsedDateTime().minusSeconds(1);
 
             if (responseList.size() < count) {
@@ -94,12 +93,13 @@ public class ChartDeltaSyncExecutor {
             }
         }
 
+        // 가장 최근 데이터 기준 시각 syncMeta 저장
         if (deltaSyncedLatestTime != null && deltaSyncedLatestTime.isAfter(syncMeta.getLastSyncedAt())) {
             syncMeta.updateLastSyncedAt(deltaSyncedLatestTime);
             chartSyncMetaRepository.save(syncMeta);
         }
 
-        log.info("[Delta Sync] 완료 → Market: {}, Unit: {}, 총 동기화 건수: {}, 최종 동기화 시점: {}",
-                market.getCoin(), unit, totalSyncedCount, deltaSyncedLatestTime);
+        log.info("[Delta Sync] 완료 → Market: {}, Unit: {}, 최종 동기화 시점: {}",
+                market.getCoin(), unit, deltaSyncedLatestTime);
     }
 }
