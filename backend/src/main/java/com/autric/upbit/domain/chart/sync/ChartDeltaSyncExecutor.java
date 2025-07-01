@@ -61,8 +61,13 @@ public class ChartDeltaSyncExecutor {
                 break;
             }
 
+//            // 중복 제거 (lastSyncedAt 이후 캔들만)
+            List<UpbitCandleResponse> filtered = responseList.stream()
+                    .filter(candle -> candle.getParsedDateTime().isAfter(maxSyncedAt))
+                    .toList();  // 또는 collect(Collectors.toList())
+
             // 차트 데이터 DB저장
-            totalSyncedCount += persistHelper.persistByUnit(responseList, market, unit);
+            totalSyncedCount += persistHelper.persistByUnit(filtered, market, unit);
 
             // 가장 최근 데이터 기준 시각 기억
             if (deltaSyncedLatestTime == null) {
