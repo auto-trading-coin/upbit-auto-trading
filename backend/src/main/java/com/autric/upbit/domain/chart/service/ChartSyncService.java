@@ -46,16 +46,17 @@ public class ChartSyncService {
     /**
      * Full Sync 실행
      */
-    public void fullSync(ChartSyncMeta syncMeta, Market market, int unit) {
+    public int fullSync(ChartSyncMeta syncMeta, Market market, int unit) {
         log.info("FullSync 실행 시작 → Market: {}, Unit: {}", market.getCoin(), unit);
-        chartFullSyncExecutor.execute(syncMeta, market, unit);
+
+        return chartFullSyncExecutor.execute(syncMeta, market, unit);
     }
 
     /**
      * Delta Sync 실행
      */
-    public void deltaSync(ChartSyncMeta syncMeta, Market market, int unit) {
+    public int deltaSync(ChartSyncMeta syncMeta, Market market, int unit) {
         log.info("DeltaSync 실행 시작 → Market: {}, Unit: {}", market.getCoin(), unit);
-        chartDeltaSyncExecutor.execute(syncMeta, market, unit);
+        return chartDeltaSyncExecutor.execute(syncMeta, market, unit);
     }
 }

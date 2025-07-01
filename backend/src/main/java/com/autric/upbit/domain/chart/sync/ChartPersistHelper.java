@@ -42,8 +42,8 @@ public class ChartPersistHelper {
      * @param unit 캔들 단위 (1, 5, 30, 60, 240, 1440)
      * @throws IllegalArgumentException 지원하지 않는 단위일 경우
      */
-    public void persistByUnit(List<UpbitCandleResponse> responses, Market market, int unit) {
-        switch (unit) {
+    public int persistByUnit(List<UpbitCandleResponse> responses, Market market, int unit) {
+        return switch (unit) {
             case 1 -> saveAllSafely(toChart1m(responses, market, unit), chart1mRepository);
             case 5 -> saveAllSafely(toChart5m(responses, market, unit), chart5mRepository);
             case 30 -> saveAllSafely(toChart30m(responses, market, unit), chart30mRepository);
@@ -51,7 +51,7 @@ public class ChartPersistHelper {
             case 240 -> saveAllSafely(toChart240m(responses, market, unit), chart240mRepository);
             case 1440 -> saveAllSafely(toChart1d(responses, market), chart1dRepository);
             default -> throw new IllegalArgumentException("지원하지 않는 unit: " + unit);
-        }
+        };
     }
 
     /**
@@ -62,12 +62,12 @@ public class ChartPersistHelper {
      * @param repository 대상 JPA Repository
      * @param <T> 엔티티 타입
      */
-    public <T> void saveAllSafely(List<T> entityList, JpaRepository<T, ?> repository) {
-        int Count = 0;
+    public <T> int saveAllSafely(List<T> entityList, JpaRepository<T, ?> repository) {
+        int count = 0;
         for (T entity : entityList) {
             try {
                 entitySaver.saveOne(repository, entity);
-                Count++;
+                count++;
             } catch (ObjectOptimisticLockingFailureException ex) {
                 log.warn("개별 저장 실패 → 낙관적 락 충돌 또는 삭제됨: {}", entity, ex.getMessage());
                 throw ex;
@@ -79,9 +79,7 @@ public class ChartPersistHelper {
             }
         }
 
-        if(Count > 0){
-            log.info("캔들 총 {}건 저장됨", Count);
-        }
+        return count;
     }
 
     private List<Chart1m> toChart1m(List<UpbitCandleResponse> responses, Market market, int unit) {

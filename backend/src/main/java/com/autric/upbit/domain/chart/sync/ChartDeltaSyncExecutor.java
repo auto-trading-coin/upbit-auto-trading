@@ -36,21 +36,19 @@ public class ChartDeltaSyncExecutor {
     private final ChartSyncMetaRepository chartSyncMetaRepository;
 
     @Transactional
-    public void execute(ChartSyncMeta syncMeta, Market market, int unit) {
+    public int execute(ChartSyncMeta syncMeta, Market market, int unit) {
 
         final int count = 200;
 
         LocalDateTime lastSyncedAt = syncMeta.getLastSyncedAt();
         if (lastSyncedAt == null) {
-            log.warn("DeltaSync 실패 - lastSyncedAt null: {}", market.getCoin());
-            return;
+            return 0;
         }
 
         LocalDateTime toTime = LocalDateTime.now(); // 현재 시각 부터 동기화 하도록 설정
         LocalDateTime maxSyncedAt = lastSyncedAt; // 최대 maxSyncedAt까지 동기화
         LocalDateTime deltaSyncedLatestTime = null; // 동기화된 캔들의 가장 최신 시각 기억
-
-        log.info("[Delta Sync] 시작 → Market: {}, Unit: {}, lastSyncedAt: {}", market.getCoin(), unit, lastSyncedAt);
+        int totalSyncedCount = 0;
 
         while (true) {
 
@@ -64,7 +62,7 @@ public class ChartDeltaSyncExecutor {
             }
 
             // 차트 데이터 DB저장
-            persistHelper.persistByUnit(responseList, market, unit);
+            totalSyncedCount += persistHelper.persistByUnit(responseList, market, unit);
 
             // 가장 최근 데이터 기준 시각 기억
             if (deltaSyncedLatestTime == null) {
@@ -75,12 +73,10 @@ public class ChartDeltaSyncExecutor {
             toTime = responseList.get(responseList.size() - 1).getParsedDateTime().minusSeconds(1);
 
             if (responseList.size() < count) {
-                log.info("마지막 페이지 도달 - 캔들 수 {} < count {} → 종료", responseList.size(), count);
                 break;
             }
 
             if (maxSyncedAt.isAfter(toTime)) {
-                log.info("toTime({}) > maxSyncedAt({}) → 더 이상 동기화할 데이터 없음", toTime, maxSyncedAt);
                 break;
             }
 
@@ -88,7 +84,6 @@ public class ChartDeltaSyncExecutor {
                 Thread.sleep(120);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
-                log.warn("Thread sleep 중단 - 동기화 중단됨");
                 break;
             }
         }
@@ -99,7 +94,6 @@ public class ChartDeltaSyncExecutor {
             chartSyncMetaRepository.save(syncMeta);
         }
 
-        log.info("[Delta Sync] 완료 → Market: {}, Unit: {}, 최종 동기화 시점: {}",
-                market.getCoin(), unit, deltaSyncedLatestTime);
+        return totalSyncedCount;
     }
 }

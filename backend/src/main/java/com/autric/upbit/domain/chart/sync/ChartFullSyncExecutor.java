@@ -32,7 +32,7 @@ public class ChartFullSyncExecutor {
     private final ChartSyncMetaRepository chartSyncMetaRepository;
 
     @Transactional
-    public void execute(ChartSyncMeta syncMeta, Market market, int unit) {
+    public int execute(ChartSyncMeta syncMeta, Market market, int unit) {
 
         final int count = 200;
         final int maxSyncCount = 400;
@@ -54,8 +54,8 @@ public class ChartFullSyncExecutor {
             LocalDateTime latestCandleTime = responseList.get(0).getParsedDateTime();
             LocalDateTime oldestCandleTime = responseList.get(responseList.size() - 1).getParsedDateTime();
 
-            persistHelper.persistByUnit(responseList, market, unit);
-            totalSyncedCount += responseList.size();
+            totalSyncedCount += persistHelper.persistByUnit(responseList, market, unit);
+
 
             if (fullSyncedLatestTime == null) {
                 fullSyncedLatestTime = latestCandleTime;
@@ -77,6 +77,6 @@ public class ChartFullSyncExecutor {
             chartSyncMetaRepository.save(syncMeta);
         }
 
-        log.info("[Full Sync] 저장 완료 - 총 건수: {}, Market: {}, Unit: {}", totalSyncedCount, market.getCoin(), unit);
+        return totalSyncedCount;
     }
 }
