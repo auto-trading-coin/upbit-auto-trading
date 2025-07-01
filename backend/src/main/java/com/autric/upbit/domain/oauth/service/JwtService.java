@@ -45,6 +45,7 @@ public class JwtService {
      * @return 저장된 Refresh Token (없으면 null)
      */
     public String get(Long memberId) {
+        System.out.println(redisTemplate.opsForValue().get(REFRESH_TOKEN_PREFIX + memberId));
         return redisTemplate.opsForValue().get(REFRESH_TOKEN_PREFIX + memberId);
     }
 
@@ -83,6 +84,7 @@ public class JwtService {
      * @return 새로 생성된 Access Token 문자열
      */
     public String reissueAccessToken(HttpServletRequest request) {
+
         String refreshToken = extractRefreshTokenFromCookie(request);
         if (refreshToken == null || !jwtProvider.validateToken(refreshToken)) {
             throw new RestApiException(ErrorCode.INVALID_TOKEN);
@@ -90,6 +92,7 @@ public class JwtService {
 
         Long memberId = jwtProvider.getMemberId(refreshToken);
 
+        // Redis에 저장된 리프레시 토큰과 일치 여부 확인
         if (!isValid(memberId, refreshToken)) {
             throw new RestApiException(ErrorCode.INVALID_TOKEN);
         }
@@ -105,6 +108,7 @@ public class JwtService {
      * @return 쿠키에서 추출한 refreshToken 값 (없으면 null)
      */
     private String extractRefreshTokenFromCookie(HttpServletRequest request) {
+
         if(request.getCookies() == null) return null;
 
         for(Cookie cookie: request.getCookies()){

@@ -1,20 +1,17 @@
 package com.autric.upbit.global.security.oauth2;
 
 import com.autric.upbit.domain.member.entity.Member;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import java.util.Collection;
 import java.util.Map;
 
+@RequiredArgsConstructor
 public class CustomOAuth2User implements OAuth2User {
 
     private final OAuth2User oAuth2User;  // 카카오 attributes, 권한 등
     private final Member member;  // DB에서 조회한 사용자
-
-    public CustomOAuth2User(OAuth2User oAuth2User, Member member) {
-        this.oAuth2User = oAuth2User;
-        this.member = member;
-    }
 
     @Override
     public Map<String, Object> getAttributes() {

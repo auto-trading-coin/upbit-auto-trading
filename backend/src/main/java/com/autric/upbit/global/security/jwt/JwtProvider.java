@@ -2,10 +2,9 @@ package com.autric.upbit.global.security.jwt;
 
 import com.autric.upbit.global.response.code.ErrorCode;
 import com.autric.upbit.global.response.exception.RestApiException;
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.JwtException;
-import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import javax.crypto.SecretKey;
@@ -18,6 +17,7 @@ import java.util.Date;
  * 토큰 유효성 검증 및 사용자 식별자 추출
  */
 @Component
+@Slf4j
 public class JwtProvider {
     private final SecretKey secret;
     private final long accessTokenValidity;
@@ -77,15 +77,9 @@ public class JwtProvider {
 
     // 토큰 유효성 검증
     public boolean validateToken(String token) {
-        try {
-            Jwts.parser()
-                    .verifyWith(secret)
-                    .build()
-                    .parseSignedClaims(token);
+            // 잘못된 토큰으로 요청 시 서버 에러 반환 수정 예정
+            Jwts.parser().verifyWith(secret).build().parseSignedClaims(token);
             return true;
-        } catch (JwtException e) {
-            throw new RestApiException(ErrorCode.INVALID_TOKEN);
-        }
     }
 
     /**
