@@ -7,7 +7,16 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "chart_60m")
+@Table(
+        name = "chart_60m",
+        indexes = {
+                @Index(name = "idx_market_unit_time_desc", columnList = "market_id, candle_date_time_kst DESC"),
+                @Index(name = "idx_market_unit_candle_time", columnList = "market_id,unit,candle_date_time_kst")
+        },
+        uniqueConstraints = {
+                @UniqueConstraint(name = "uk_market_unit_candle_time", columnNames = {"market_id", "unit", "candle_date_time_kst"})
+        }
+)
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @ToString
@@ -20,7 +29,7 @@ public class Chart60m {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "market_id")
-    private Market market;  // ex: KRW-BTC
+    private Market market;
 
     @Column(name = "candle_date_time_kst")
     private LocalDateTime candleDateTimeKst;
@@ -37,21 +46,25 @@ public class Chart60m {
     @Column(name = "trade_price", precision = 24, scale = 12)
     private BigDecimal tradePrice;
 
-    private LocalDateTime timestamp; // 해당 캔들의 마지막 틱 저장 시각
+    /**
+     * 해당 캔들의 마지막 틱 저장 시각 (UTC 기준 epoch millis)
+     */
+    @Column(name = "timestamp")
+    private Long timestamp;
 
-    @Column(name = "candle_acc_trade_price", precision = 24, scale = 12)
+    @Column(name = "candle_acc_trade_price", precision = 35, scale = 12)
     private BigDecimal candleAccTradePrice;
 
-    @Column(name = "candle_acc_trade_volume", precision = 24, scale = 12)
+    @Column(name = "candle_acc_trade_volume", precision = 35, scale = 12)
     private BigDecimal candleAccTradeVolume;
 
-    private Integer unit;  // ex: 1 (1분), 5 (5분) 등
+    private Integer unit;
 
     @Builder
     public Chart60m(Market market, LocalDateTime candleDateTimeKst, BigDecimal openingPrice,
-                   BigDecimal highPrice, BigDecimal lowPrice, BigDecimal tradePrice,
-                   LocalDateTime timestamp, BigDecimal candleAccTradePrice,
-                   BigDecimal candleAccTradeVolume, Integer unit) {
+                    BigDecimal highPrice, BigDecimal lowPrice, BigDecimal tradePrice,
+                    Long timestamp, BigDecimal candleAccTradePrice,
+                    BigDecimal candleAccTradeVolume, Integer unit) {
         this.market = market;
         this.candleDateTimeKst = candleDateTimeKst;
         this.openingPrice = openingPrice;

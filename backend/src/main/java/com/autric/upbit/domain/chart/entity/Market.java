@@ -1,10 +1,7 @@
 package com.autric.upbit.domain.chart.entity;
 
 import jakarta.persistence.*;
-import lombok.AccessLevel;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.ToString;
+import lombok.*;
 
 @Entity
 @Getter
@@ -20,4 +17,8 @@ public class Market {
     @Column(length = 50)
     private String coin;
 
+    @Builder
+    public Market(Long id, String coin) {
+        this.coin = coin;
+    }
 }

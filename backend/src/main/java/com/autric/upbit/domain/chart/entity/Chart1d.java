@@ -7,83 +7,63 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "chart_1d")
+@Table(
+        name = "chart_1d",
+        indexes = {
+                @Index(name = "idx_market_unit_time_desc", columnList = "market_id, candle_date_time_kst DESC"),
+                @Index(name = "idx_market_unit_candle_time", columnList = "market_id,unit,candle_date_time_kst")
+        },
+        uniqueConstraints = {
+                @UniqueConstraint(name = "uk_market_unit_candle_time", columnNames = {"market_id", "unit", "candle_date_time_kst"})
+        }
+)
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @ToString
 public class Chart1d {
 
-    /**
-     * 차트 1일봉 PK
-     */
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "chart_1d_id")
     private Long id;
 
-    /**
-     * 마켓ID FK
-     */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "market_id")
-    private Market market;  // ex: KRW-BTC
+    private Market market;
 
-    /**
-     * 캔들 기준 시각(KST기준)
-     */
     @Column(name = "candle_date_time_kst")
     private LocalDateTime candleDateTimeKst;
 
-    /**
-     * 시가
-     */
     @Column(name = "opening_price", precision = 24, scale = 12)
     private BigDecimal openingPrice;
 
-    /**
-     * 고가
-     */
     @Column(name = "high_price", precision = 24, scale = 12)
     private BigDecimal highPrice;
 
-    /**
-     * 저가
-     */
     @Column(name = "low_price", precision = 24, scale = 12)
     private BigDecimal lowPrice;
 
-    /**
-     * 종가
-     */
     @Column(name = "trade_price", precision = 24, scale = 12)
     private BigDecimal tradePrice;
 
     /**
-     * 해당 캔들에서 마지막 틱이 저장된 시각
+     * 해당 캔들의 마지막 틱 저장 시각 (UTC 기준 epoch millis)
      */
-    private LocalDateTime timestamp; // 해당 캔들의 마지막 틱 저장 시각
+    @Column(name = "timestamp")
+    private Long timestamp;
 
-    /**
-     * 누적 거래량
-     */
-    @Column(name = "candle_acc_trade_price", precision = 24, scale = 12)
+    @Column(name = "candle_acc_trade_price", precision = 35, scale = 12)
     private BigDecimal candleAccTradePrice;
 
-    /**
-     * 누적 거래량
-     */
-    @Column(name = "candle_acc_trade_volume", precision = 24, scale = 12)
+    @Column(name = "candle_acc_trade_volume", precision = 35, scale = 12)
     private BigDecimal candleAccTradeVolume;
 
-    /**
-     * 봉 단위
-     */
-    private Integer unit;  // ex: 1 (1분), 5 (5분) 등
+    private Integer unit;
 
     @Builder
     public Chart1d(Market market, LocalDateTime candleDateTimeKst, BigDecimal openingPrice,
                    BigDecimal highPrice, BigDecimal lowPrice, BigDecimal tradePrice,
-                   LocalDateTime timestamp, BigDecimal candleAccTradePrice,
+                   Long timestamp, BigDecimal candleAccTradePrice,
                    BigDecimal candleAccTradeVolume, Integer unit) {
         this.market = market;
         this.candleDateTimeKst = candleDateTimeKst;
