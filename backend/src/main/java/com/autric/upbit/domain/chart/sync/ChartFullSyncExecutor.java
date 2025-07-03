@@ -34,7 +34,7 @@ public class ChartFullSyncExecutor {
     @Transactional
     public int execute(ChartSyncMeta syncMeta, Market market, int unit) {
         final int count = 200;
-        final int maxSyncCount = 400;
+        final int maxSyncCount = 1000;
         int totalSyncedCount = 0;
 
         LocalDateTime toTime = LocalDateTime.now();
