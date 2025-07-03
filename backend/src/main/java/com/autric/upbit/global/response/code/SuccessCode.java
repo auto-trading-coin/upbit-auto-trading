@@ -13,6 +13,7 @@ import org.springframework.http.HttpStatus;
 @Getter
 @RequiredArgsConstructor
 public enum SuccessCode implements ResponseCode {
+
     /*
         USER
      */

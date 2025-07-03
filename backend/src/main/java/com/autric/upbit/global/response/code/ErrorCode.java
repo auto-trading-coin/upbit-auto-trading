@@ -13,6 +13,7 @@ import org.springframework.http.HttpStatus;
 @Getter
 @RequiredArgsConstructor
 public enum ErrorCode implements ResponseCode {
+
     /*
         Common
      */

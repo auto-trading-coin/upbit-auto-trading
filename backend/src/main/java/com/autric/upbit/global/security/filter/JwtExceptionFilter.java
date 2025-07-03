@@ -47,7 +47,8 @@ public class JwtExceptionFilter extends OncePerRequestFilter {
                 .build();
         try{
             response.getWriter().write(objectMapper.writeValueAsString(errorResponse));
-        }catch (IOException e){
+        }
+        catch (IOException e){
         }
     }
 }

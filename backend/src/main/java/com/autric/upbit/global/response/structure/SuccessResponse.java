@@ -18,6 +18,7 @@ import org.springframework.http.ResponseEntity;
 @Builder
 @RequiredArgsConstructor
 public class SuccessResponse<T> {
+
     private final String code;
     private final String message;
 

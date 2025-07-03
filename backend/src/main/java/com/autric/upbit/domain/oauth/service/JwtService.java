@@ -35,6 +35,7 @@ public class JwtService {
     public void save(Long memberId, String refreshToken) {
         String key = REFRESH_TOKEN_PREFIX + memberId;
         long expirationSeconds = refreshTokenExpiration / 1000;  // 기존 밀리초 단위를 초 단위로 변환
+
         redisTemplate.opsForValue().set(key, refreshToken, expirationSeconds, TimeUnit.SECONDS);
     }
 
@@ -45,7 +46,6 @@ public class JwtService {
      * @return 저장된 Refresh Token (없으면 null)
      */
     public String get(Long memberId) {
-        System.out.println(redisTemplate.opsForValue().get(REFRESH_TOKEN_PREFIX + memberId));
         return redisTemplate.opsForValue().get(REFRESH_TOKEN_PREFIX + memberId);
     }
 
@@ -68,6 +68,7 @@ public class JwtService {
      */
     public boolean isValid(Long memberId, String refreshToken) {
         String stored = get(memberId);
+
         return stored != null && stored.equals(refreshToken);
     }
 
@@ -84,7 +85,6 @@ public class JwtService {
      * @return 새로 생성된 Access Token 문자열
      */
     public String reissueAccessToken(HttpServletRequest request) {
-
         String refreshToken = extractRefreshTokenFromCookie(request);
         if (refreshToken == null || !jwtProvider.validateToken(refreshToken)) {
             throw new RestApiException(ErrorCode.INVALID_TOKEN);
@@ -108,7 +108,6 @@ public class JwtService {
      * @return 쿠키에서 추출한 refreshToken 값 (없으면 null)
      */
     private String extractRefreshTokenFromCookie(HttpServletRequest request) {
-
         if(request.getCookies() == null) return null;
 
         for(Cookie cookie: request.getCookies()){
@@ -116,6 +115,7 @@ public class JwtService {
                 return cookie.getValue();
             }
         }
+
         return null;
     }
 

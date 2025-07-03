@@ -19,6 +19,7 @@ import java.util.Date;
 @Component
 @Slf4j
 public class JwtProvider {
+
     private final SecretKey secret;
     private final long accessTokenValidity;
     private final long refreshTokenValidity;
@@ -40,7 +41,12 @@ public class JwtProvider {
         this.refreshTokenValidity = refreshTokenValidity;
     }
 
-    // 액세스 토큰 발급
+    /**
+     * 액세스 토큰을 발급하는 메서드
+     *
+     * @param memberId 토큰에 담길 사용자 ID
+     * @return 생성된 액세스 토큰(JWT)
+     */
     public String createAccessToken(Long memberId) {
         return Jwts.builder()
                 .subject(String.valueOf(memberId))
@@ -50,7 +56,12 @@ public class JwtProvider {
                 .compact();
     }
 
-    // 리프레시 토큰 발급
+    /**
+     * 리프레시 토큰을 발급하는 메서드
+     *
+     * @param memberId 토큰에 담길 사용자 ID
+     * @return 생성된 리프레시 토큰(JWT)
+     */
     public String createRefreshToken(Long memberId) {
         return Jwts.builder()
                 .subject(String.valueOf(memberId))
@@ -60,7 +71,13 @@ public class JwtProvider {
                 .compact();
     }
 
-    // 토큰에서 사용자 ID 추출
+
+    /**
+     * 토큰에서 사용자 ID를 추출하는 메서드
+     *
+     * @param token 사용자 정보를 담고 있는 JWT
+     * @return 추출된 사용자 ID
+     */
     public Long getMemberId(String token) {
         try {
             Claims claims = Jwts.parser()
@@ -75,11 +92,17 @@ public class JwtProvider {
         }
     }
 
-    // 토큰 유효성 검증
+    /**
+     * 토큰의 유효성을 검증하는 메서드
+     *
+     * @param token 검증할 JWT
+     * @return 유효할 경우 true 반환, 예외 발생 시 처리 필요
+     */
     public boolean validateToken(String token) {
-            // 잘못된 토큰으로 요청 시 서버 에러 반환 수정 예정
-            Jwts.parser().verifyWith(secret).build().parseSignedClaims(token);
-            return true;
+        // 잘못된 토큰으로 요청 시 서버 에러 반환 수정 예정
+        Jwts.parser().verifyWith(secret).build().parseSignedClaims(token);
+
+        return true;
     }
 
     /**
@@ -88,7 +111,6 @@ public class JwtProvider {
      *
      * @param token
      */
-
     public void isTokenExpired(String token) {
         try {
             Date expiration = Jwts.parser()
