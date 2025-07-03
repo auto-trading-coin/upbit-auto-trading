@@ -81,4 +81,19 @@ public class Member {
         this.accessKey = accessKey;
         this.secretKey = secretKey;
     }
+
+    /**
+     * 업비트 API키 등록 여부를 확인하는 편의 메서드
+    */
+    public boolean hasApiKey(){
+        return accessKey != null && !accessKey.isBlank()
+                && secretKey != null && !secretKey.isBlank();
+    }
+
+    /**
+     * 매매 전략 설정 여부를 확인하는 편의 메서드
+     */
+    public boolean hasStrategy(){
+        return strategy != null;
+    }
 }

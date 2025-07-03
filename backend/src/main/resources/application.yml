@@ -10,11 +10,48 @@ spring:
     username: ${MYSQL_ID}
     password: ${MYSQL_PASSWORD}
 
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
   jpa:
-    show-sql: true
+    show-sql: false
     database-platform: org.hibernate.dialect.MySQL8Dialect
     hibernate:
       ddl-auto: update
     properties:
       hibernate:
         format_sql: true
+
+  security:
+    oauth2:
+      client:
+        registration:
+          kakao:
+            client-id: ${KAKAO_CLIENT_ID}
+            client-secret: ${KAKAO_CLIENT_SECRET}
+            # 사용자가 로그인 후 리다이렉트될 URI (스프링 시큐리티가 자동 처리)
+            # {baseUrl}은 현재 백엔드 서버 URL로 자동 대체됨
+            redirect-uri: "{baseUrl}/login/oauth2/code/kakao"
+            authorization-grant-type: authorization_code  # OAuth2 인증 방식: 인가 코드 방식
+            client-authentication-method: client_secret_post
+            # 카카오에 요청할 사용자 정보 범위 (scope)
+            # 이 설정을 통해 닉네임과 이메일 정보를 가져올 수 있음
+            scope: profile_nickname, account_email
+
+        provider:
+          kakao: # 위 registration과 이름 일치해야 함
+            authorization-uri: https://kauth.kakao.com/oauth/authorize  # 카카오 인가 코드 요청 URL
+            token-uri: https://kauth.kakao.com/oauth/token  # 카카오 액세스 토큰 발급 URL
+            user-info-uri: https://kapi.kakao.com/v2/user/me  # 액세스 토큰으로 사용자 정보 가져올 URL
+            user-name-attribute: id  # 사용자 고유 식별자 키. 카카오는 'id'를 사용함
+
+  jwt:
+    secret: ${JWT_SECRET}
+    access-expired: ${ACCESS_EXPIRED}
+    refresh-expired: ${REFRESH_EXPIRED}
+
+  devtools:
+    restart:
+      enabled: true
