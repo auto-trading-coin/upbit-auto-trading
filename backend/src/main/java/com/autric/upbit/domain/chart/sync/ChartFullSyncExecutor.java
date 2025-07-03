@@ -33,7 +33,6 @@ public class ChartFullSyncExecutor {
 
     @Transactional
     public int execute(ChartSyncMeta syncMeta, Market market, int unit) {
-
         final int count = 200;
         final int maxSyncCount = 400;
         int totalSyncedCount = 0;

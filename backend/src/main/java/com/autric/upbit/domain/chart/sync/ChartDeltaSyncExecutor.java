@@ -37,7 +37,6 @@ public class ChartDeltaSyncExecutor {
 
     @Transactional
     public int execute(ChartSyncMeta syncMeta, Market market, int unit) {
-
         final int count = 200;
 
         LocalDateTime lastSyncedAt = syncMeta.getLastSyncedAt();
@@ -51,7 +50,6 @@ public class ChartDeltaSyncExecutor {
         int totalSyncedCount = 0;
 
         while (true) {
-
             List<UpbitCandleResponse> responseList = (unit == 1440)
                     ? upbitApiClient.getDayCandles(market, count, toTime)
                     : upbitApiClient.getMinuteCandles(market, unit, count, toTime);
@@ -61,7 +59,7 @@ public class ChartDeltaSyncExecutor {
                 break;
             }
 
-//            // 중복 제거 (lastSyncedAt 이후 캔들만)
+            // 중복 제거 (lastSyncedAt 이후 캔들만)
             List<UpbitCandleResponse> filtered = responseList.stream()
                     .filter(candle -> candle.getParsedDateTime().isAfter(maxSyncedAt))
                     .toList();  // 또는 collect(Collectors.toList())

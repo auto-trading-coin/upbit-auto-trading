@@ -56,9 +56,9 @@ public class ChartSyncService {
      * Delta Sync 실행
      */
     public int deltaSync(ChartSyncMeta syncMeta, Market market, int unit) {
-
         int count = chartDeltaSyncExecutor.execute(syncMeta, market, unit);
-        log.info("DeltaSync {}건 저장 완료 → Market: {}, Unit: {} ",count, market.getCoin(), unit);
+
+        // log.info("DeltaSync {}건 저장 완료 → Market: {}, Unit: {} ",count, market.getCoin(), unit);
         return count;
     }
 }

@@ -26,7 +26,6 @@ public class initDB {
         private final EntityManager em;
 
         public void initMarketData() {
-
             // Market 데이터가 이미 있으면 skip
             Long marketCount = em.createQuery("SELECT COUNT(m) FROM Market m", Long.class)
                     .getSingleResult();
