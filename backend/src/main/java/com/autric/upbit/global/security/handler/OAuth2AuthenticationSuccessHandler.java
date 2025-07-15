@@ -1,12 +1,10 @@
 package com.autric.upbit.global.security.handler;
 
 
-import com.autric.upbit.domain.member.dto.response.LoginResponse;
 import com.autric.upbit.domain.member.entity.Member;
 import com.autric.upbit.domain.oauth.service.JwtService;
 import com.autric.upbit.global.security.jwt.JwtProvider;
 import com.autric.upbit.global.security.oauth2.CustomOAuth2User;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
@@ -29,7 +27,6 @@ import java.io.IOException;
 public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccessHandler {
 
     private final JwtProvider jwtProvider;
-    private final ObjectMapper objectMapper;
     private final JwtService jwtService;
     @Value("${refresh-expired}")
     private long refreshTokenExpiration;
@@ -41,7 +38,6 @@ public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccess
         Member member = oAuth2User.getMember();
 
         // JWT 생성
-        String accessToken = jwtProvider.createAccessToken(member.getId());
         String refreshToken = jwtProvider.createRefreshToken(member.getId());
 
         // Redis에 Refresh Token 저장
@@ -50,29 +46,13 @@ public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccess
         // 로그인 후, 응답 구성
         // RefreshToken을 HttpOnly 쿠키로 설정
         Cookie refreshTokenCookie = new Cookie("refreshToken", refreshToken);
-        refreshTokenCookie.setHttpOnly(true);
-        refreshTokenCookie.setSecure(true);
+//        refreshTokenCookie.setHttpOnly(true);
+//        refreshTokenCookie.setSecure(true);
         refreshTokenCookie.setPath("/");
         refreshTokenCookie.setMaxAge((int) refreshTokenExpiration / 1000);
         response.addCookie(refreshTokenCookie);
 
-        // AccessToken + 유저 정보는 JSON으로 응답
-        LoginResponse.MemberInfo memberInfo = LoginResponse.MemberInfo.builder()
-                .email(member.getEmail())
-                .nickname(member.getNickname())
-                .tradeActive(member.getTradeActive())
-                .strategyRegistered(member.hasStrategy())
-                .apiKeyRegistered(member.hasApiKey())
-                .build();
-
-        LoginResponse loginResponse = LoginResponse.builder()
-                .accessToken(accessToken)
-                .member(memberInfo)
-                .build();
-
-        // JSON 응답 전송
-        response.setContentType("application/json");
-        response.setCharacterEncoding("UTF-8");
-        objectMapper.writeValue(response.getWriter(), loginResponse);
+        String frontendRedirectUrl = "http://localhost:3000/";
+        response.sendRedirect(frontendRedirectUrl);
     }
 }

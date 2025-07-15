@@ -1,9 +1,7 @@
 package com.autric.upbit.domain.oauth.controller;
 
 import com.autric.upbit.domain.oauth.service.JwtService;
-import com.autric.upbit.global.response.code.ErrorCode;
 import com.autric.upbit.global.response.code.SuccessCode;
-import com.autric.upbit.global.response.exception.RestApiException;
 import com.autric.upbit.global.response.structure.SuccessResponse;
 import com.autric.upbit.global.security.oauth2.CustomOAuth2User;
 import jakarta.servlet.http.Cookie;
@@ -12,7 +10,6 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.ErrorResponse;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -35,7 +32,6 @@ public class TokenController {
     @GetMapping
     public ResponseEntity<?> reissueAccessToken(HttpServletRequest request){
         String accessToken = jwtService.reissueAccessToken(request);
-
         // 새로운 accessToken을 응답으로 반환
         return SuccessResponse.createSuccess(SuccessCode.TOKEN_REISSUE_SUCCESS, accessToken);
     }
@@ -55,7 +51,7 @@ public class TokenController {
      */
     @GetMapping("logout")
     public ResponseEntity<?> deleteRefreshToken(@AuthenticationPrincipal CustomOAuth2User user, HttpServletResponse response){
-
+        System.out.println("로그아웃 요청");
         // Redis RefreshToken 제거
         Long id = user.getMember().getId();
         jwtService.delete(id);
@@ -64,8 +60,8 @@ public class TokenController {
         Cookie expiredCookie = new Cookie("refreshToken", null);
         expiredCookie.setMaxAge(0); // 즉시 만료
         expiredCookie.setPath("/"); // 전체 경로에서 삭제
-        expiredCookie.setHttpOnly(true);
-        expiredCookie.setSecure(true); // HTTPS 환경에서만 설정
+//        expiredCookie.setHttpOnly(true);
+//        expiredCookie.setSecure(true); // HTTPS 환경에서만 설정
         response.addCookie(expiredCookie);
 
         return SuccessResponse.createSuccess(SuccessCode.LOGOUT_SUCCESS);
