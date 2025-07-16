@@ -3,6 +3,10 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/components/ui/use-toast';
+import { getMyInfo } from '@/apis/MemberApi';
+import api from '@/apis/api';
+import { setAccessToken, removeAccessToken, getAccessToken } from '@/utils/token';
+import { logoutApi } from '@/apis/TokenApi';
 
 // 타입 정의
 interface User {
@@ -47,38 +51,52 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     // 로그인 상태 확인
     useEffect(() => {
-        const checkAuthStatus = () => {
+        let isMounted = true;
+        const checkAuthStatus = async () => {
             setIsLoading(true);
             try {
-                // 로컬 스토리지에서 토큰 확인
-                const accessToken = localStorage.getItem('access_token');
-                const refreshToken = localStorage.getItem('refresh_token');
-
-                if (accessToken && refreshToken) {
-                    // 토큰이 있으면 사용자 정보 가져오기
-                    const storedUser = localStorage.getItem('user_data');
-
-                    if (storedUser) {
-                        setUser(JSON.parse(storedUser));
+                const accessToken = getAccessToken();
+                if (accessToken) {
+                    // accessToken이 있으면 바로 /member/me로 유저 정보 조회
+                    const userInfo = await getMyInfo();
+                    if (isMounted) {
+                        setUser({
+                            id: userInfo.email,
+                            email: userInfo.email,
+                            name: userInfo.nickname,
+                            tradeActive: userInfo.tradeActive,
+                            strategy_registered: userInfo.strategyRegistered,
+                            api_key_registered: userInfo.apiKeyRegistered,
+                        });
                     }
                 } else {
-                    setUser(null);
+                    // accessToken이 없으면 /token으로 발급 후 /member/me 조회
+                    const { data: tokenData } = await api.get('/token', { withCredentials: true });
+                    setAccessToken(tokenData.data);
+                    const userInfo = await getMyInfo();
+                    if (isMounted) {
+                        setUser({
+                            id: userInfo.email,
+                            email: userInfo.email,
+                            name: userInfo.nickname,
+                            tradeActive: userInfo.tradeActive,
+                            strategy_registered: userInfo.strategyRegistered,
+                            api_key_registered: userInfo.apiKeyRegistered,
+                        });
+                    }
                 }
             } catch (error) {
-                console.error('Failed to check auth status:', error);
-                // 오류 발생 시 로그아웃 처리
-                localStorage.removeItem('access_token');
-                localStorage.removeItem('refresh_token');
-                localStorage.removeItem('user_data');
-                setUser(null);
+                if (isMounted) {
+                    setUser(null);
+                    removeAccessToken();
+                }
             } finally {
-                setIsLoading(false);
+                if (isMounted) setIsLoading(false);
             }
         };
 
         checkAuthStatus();
 
-        // 페이지 포커스 시 인증 상태 확인 (탭 전환 후 돌아왔을 때)
         const handleFocus = () => {
             checkAuthStatus();
         };
@@ -86,6 +104,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         window.addEventListener('focus', handleFocus);
 
         return () => {
+            isMounted = false;
             window.removeEventListener('focus', handleFocus);
         };
     }, []);
@@ -93,14 +112,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
     // 카카오 로그인 함수
     const login = () => {
         const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8080';
-        window.location.href = `${backendUrl}/api/oauth2/authorize/kakao`;
+        window.location.href = `${backendUrl}/oauth2/authorization/kakao`;
     };
 
     // 로그아웃 함수
-    const logout = () => {
-        localStorage.removeItem('access_token');
+    const logout = async () => {
+        try {
+            await logoutApi();
+        } catch (e) {
+            // ignore
+        }
+        removeAccessToken();
         localStorage.removeItem('refresh_token');
-        localStorage.removeItem('user_data');
         setUser(null);
 
         toast({
