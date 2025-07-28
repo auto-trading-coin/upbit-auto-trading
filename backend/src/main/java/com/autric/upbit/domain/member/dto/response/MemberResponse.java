@@ -1,4 +1,22 @@
 package com.autric.upbit.domain.member.dto.response;
 
+import lombok.Builder;
+import lombok.Getter;
+
 public class MemberResponse {
+
+    /**
+     * 로그인 성공 시 클라이언트에 전달될 응답 DTO.
+     * 이메일, 닉네임, 자동매매여부, 매매전략, 업비트 API와 같은 회원 정보를 포함.
+     */
+    @Getter
+    @Builder
+    public static class LoginResponse {
+
+        private String email;
+        private String nickname;
+        private boolean tradeActive;
+        private boolean strategyRegistered;
+        private boolean apiKeyRegistered;
+    }
 }

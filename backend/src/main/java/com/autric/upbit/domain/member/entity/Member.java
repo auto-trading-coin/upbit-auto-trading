@@ -96,4 +96,8 @@ public class Member {
     public boolean hasStrategy(){
         return strategy != null;
     }
+
+    public void updateTradeActive(boolean status) {
+        this.tradeActive = status;
+    }
 }

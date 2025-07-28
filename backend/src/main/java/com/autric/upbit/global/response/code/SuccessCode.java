@@ -20,6 +20,7 @@ public enum SuccessCode implements ResponseCode {
     LOGIN_SUCCESS(HttpStatus.OK, "로그인에 성공했습니다."),
     LOGOUT_SUCCESS(HttpStatus.OK, "로그아웃에 성공했습니다."),
     MEMBER_INFO_SUCCESS(HttpStatus.OK, "회원정보 조회에 성공했습니다."),
+    UPDATE_TRADE_ACTIVE_SUCCESS(HttpStatus.OK, "자동매매 상태 변경에 성공했습니다."),
 
     /*
         TOKEN
