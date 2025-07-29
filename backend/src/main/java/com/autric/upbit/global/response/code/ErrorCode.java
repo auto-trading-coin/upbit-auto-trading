@@ -35,7 +35,14 @@ public enum ErrorCode implements ResponseCode {
      */
     EXPIRED_TOKEN(HttpStatus.UNAUTHORIZED, "토큰이 만료 되었습니다."),
     INVALID_TOKEN(HttpStatus.BAD_REQUEST, "잘못된 토큰입니다."),
-    UNSUPPORTED_TOKEN(HttpStatus.FORBIDDEN, "잘못된 토큰입니다.");
+    UNSUPPORTED_TOKEN(HttpStatus.FORBIDDEN, "잘못된 토큰입니다."),
+
+    /*
+        Upbit
+     */
+    INVALID_UPBIT_API_KEY(HttpStatus.BAD_REQUEST, "유효하지 않은 업비트 API KEY 입니다"),
+    DUPLICATE_UPBIT_API_KEY(HttpStatus.BAD_REQUEST, "중복된 API KEY 입니다."),
+    UPBIT_API_KEY_NOT_FOUND(HttpStatus.NOT_FOUND, "업비트 API KEY가 등록되지 않았습니다.");
 
     private final HttpStatus httpStatus;
     private final String message;

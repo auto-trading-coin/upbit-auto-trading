@@ -94,4 +94,18 @@ public class UpbitApiClient {
                 .collectList()
                 .block();
     }
+
+    /**
+     * 사용자의 업비트 계좌 정보를 조회 합니다. (API 키 검증용)
+     *
+     * @param jwtToken
+     */
+    public void getAccounts(String jwtToken) {
+        upbitWebClient.get()
+                .uri("/v1/accounts")
+                .header("Authorization", "Bearer " + jwtToken)
+                .retrieve()
+                .bodyToMono(String.class) // 응답 필요 없으므로 검증만
+                .block();
+    }
 }

@@ -97,7 +97,18 @@ public class Member {
         return strategy != null;
     }
 
+    /**
+     * 자동매매 상태를 변경하는 편의 메서드
+     */
     public void updateTradeActive(boolean status) {
         this.tradeActive = status;
+    }
+
+    /**
+     * 업비트 API KEY를 등록하는 편의 메서드
+     */
+    public void setUpbitApiKey(String accessKey, String secretKey){
+        this.accessKey = accessKey;
+        this.secretKey = secretKey;
     }
 }

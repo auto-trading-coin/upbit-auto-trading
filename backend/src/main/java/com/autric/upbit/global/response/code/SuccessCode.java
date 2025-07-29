@@ -25,7 +25,12 @@ public enum SuccessCode implements ResponseCode {
     /*
         TOKEN
      */
-    TOKEN_REISSUE_SUCCESS(HttpStatus.OK, "토큰 재발급에 성공했습니다.");
+    TOKEN_REISSUE_SUCCESS(HttpStatus.CREATED, "토큰 재발급에 성공했습니다."),
+
+    /*
+        Upbit
+     */
+    REGISTER_UPBIT_API_KEY_SUCCESS(HttpStatus.CREATED, "업비트 API KEY 등록에 성공했습니다.");
 
     private final HttpStatus httpStatus;
     private final String message;
