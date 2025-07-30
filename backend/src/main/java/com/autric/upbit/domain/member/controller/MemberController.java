@@ -1,8 +1,9 @@
 package com.autric.upbit.domain.member.controller;
 
-import com.autric.upbit.domain.member.dto.request.MemberRequest;
+import com.autric.upbit.domain.member.dto.request.MemberTradeActiveRequest;
+import com.autric.upbit.domain.member.dto.response.MemberTradeActiveResponse;
 import com.autric.upbit.domain.member.service.MemberService;
-import com.autric.upbit.external.upbit.dto.request.UpbitRequest;
+import com.autric.upbit.external.upbit.dto.request.UpbitAuthRequest;
 import com.autric.upbit.external.upbit.service.UpbitAuthService;
 import com.autric.upbit.global.response.code.SuccessCode;
 import com.autric.upbit.global.response.structure.SuccessResponse;
@@ -41,9 +42,9 @@ public class MemberController {
      * 응답: 자동매매 상태 변경 성공 여부
      */
     @PatchMapping("/trade-active")
-    public ResponseEntity<?> updateTradeActive(@AuthenticationPrincipal CustomOAuth2User user, @RequestBody MemberRequest.tradeActiveDto dto){
-        memberService.updateTradeActive(user, dto.isTradeActive());
-        return SuccessResponse.createSuccess(SuccessCode.UPDATE_TRADE_ACTIVE_SUCCESS);
+    public ResponseEntity<?> updateTradeActive(@AuthenticationPrincipal CustomOAuth2User user, @RequestBody MemberTradeActiveRequest dto){
+        MemberTradeActiveResponse response = memberService.updateTradeActive(user, dto.isTradeActive());
+        return SuccessResponse.createSuccess(SuccessCode.UPDATE_TRADE_ACTIVE_SUCCESS, response);
     }
 
     /**
@@ -56,7 +57,7 @@ public class MemberController {
      * 응답: 업비트 API KEY 등록 여부
      */
     @PutMapping("/upbit-api-key")
-    public ResponseEntity<?> upbitApiKeyRegistration(@AuthenticationPrincipal CustomOAuth2User user, @RequestBody UpbitRequest.UpbitAuthRequestDto dto){
+    public ResponseEntity<?> upbitApiKeyRegistration(@AuthenticationPrincipal CustomOAuth2User user, @RequestBody UpbitAuthRequest dto){
         // 유효한 API KEY 검증
         upbitAuthService.isValidUpbitKey(dto);
         // API KEY 중복 확인 및 저장

@@ -51,7 +51,6 @@ public class TokenController {
      */
     @GetMapping("logout")
     public ResponseEntity<?> deleteRefreshToken(@AuthenticationPrincipal CustomOAuth2User user, HttpServletResponse response){
-        System.out.println("로그아웃 요청");
         // Redis RefreshToken 제거
         Long id = user.getMember().getId();
         jwtService.delete(id);

@@ -1,7 +1,8 @@
 package com.autric.upbit.domain.member.service;
 
-import com.autric.upbit.domain.member.dto.response.MemberResponse;
-import com.autric.upbit.external.upbit.dto.request.UpbitRequest;
+import com.autric.upbit.domain.member.dto.response.MemberLoginResponse;
+import com.autric.upbit.domain.member.dto.response.MemberTradeActiveResponse;
+import com.autric.upbit.external.upbit.dto.request.UpbitAuthRequest;
 import com.autric.upbit.global.response.code.ErrorCode;
 import com.autric.upbit.domain.member.entity.Member;
 import com.autric.upbit.domain.member.repository.MemberRepository;
@@ -17,20 +18,14 @@ public class MemberService {
 
     private final MemberRepository memberRepository;
 
-    public MemberResponse.LoginResponse getLoginData(CustomOAuth2User oAuth2User){
+    public MemberLoginResponse getLoginData(CustomOAuth2User oAuth2User){
         Member member = oAuth2User.getMember();
 
-        return MemberResponse.LoginResponse.builder()
-                .email(member.getEmail())
-                .nickname(member.getNickname())
-                .tradeActive(member.getTradeActive())
-                .strategyRegistered(member.hasStrategy())
-                .apiKeyRegistered(member.hasApiKey())
-                .build();
+        return MemberLoginResponse.fromEntity(member);
     }
 
     @Transactional
-    public void updateTradeActive(CustomOAuth2User oAuth2User, boolean status){
+    public MemberTradeActiveResponse updateTradeActive(CustomOAuth2User oAuth2User, boolean status){
         long memberId = oAuth2User.getMember().getId();
 
         // member 객체를 JPA 영속 상태로 만들기 위해 DB 조회
@@ -43,10 +38,11 @@ public class MemberService {
 
         // 더티체킹으로 인해 변경사항 발생 시 자동으로 DB 반영
         member.updateTradeActive(status);
+        return MemberTradeActiveResponse.of(status);
     }
 
     @Transactional
-    public void registerUpbitApiKey(CustomOAuth2User user, UpbitRequest.UpbitAuthRequestDto dto) {
+    public void registerUpbitApiKey(CustomOAuth2User user, UpbitAuthRequest dto) {
         String accessKey = dto.getAccessKey();
         String secretKey = dto.getSecretKey();
 

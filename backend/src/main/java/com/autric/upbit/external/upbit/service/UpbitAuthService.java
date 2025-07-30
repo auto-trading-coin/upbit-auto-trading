@@ -1,7 +1,7 @@
 package com.autric.upbit.external.upbit.service;
 
 import com.autric.upbit.external.upbit.client.UpbitApiClient;
-import com.autric.upbit.external.upbit.dto.request.UpbitRequest;
+import com.autric.upbit.external.upbit.dto.request.UpbitAuthRequest;
 import com.autric.upbit.global.response.code.ErrorCode;
 import com.autric.upbit.global.response.exception.RestApiException;
 import io.jsonwebtoken.Jwts;
@@ -26,11 +26,10 @@ public class UpbitAuthService {
     /**
      * 사용자의 accessKey/secretKey가 유효한 Upbit 키인지 확인
      */
-    public boolean isValidUpbitKey(UpbitRequest.UpbitAuthRequestDto dto) {
+    public void isValidUpbitKey(UpbitAuthRequest dto) {
         try {
             String jwt = createUpbitJwt(dto.getAccessKey(), dto.getSecretKey());
             upbitApiClient.getAccounts(jwt); // 요청 성공 = 키 유효
-            return true;
         } catch (WebClientResponseException e) {
             log.warn("업비트 API 키 유효성 실패 - 상태코드: {}, 응답: {}", e.getStatusCode(), e.getResponseBodyAsString());
             throw new RestApiException(ErrorCode.INVALID_UPBIT_API_KEY);
