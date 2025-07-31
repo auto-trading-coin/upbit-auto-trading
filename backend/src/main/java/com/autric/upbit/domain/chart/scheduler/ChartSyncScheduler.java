@@ -1,8 +1,11 @@
 package com.autric.upbit.domain.chart.scheduler;
 
+import com.autric.upbit.domain.chart.dto.response.ChartResponse;
 import com.autric.upbit.domain.chart.entity.ChartSyncMeta;
 import com.autric.upbit.domain.chart.entity.Market;
 import com.autric.upbit.domain.chart.repository.MarketRepository;
+import com.autric.upbit.domain.chart.service.ChartRedisService;
+import com.autric.upbit.domain.chart.service.ChartService;
 import com.autric.upbit.domain.chart.service.ChartSyncService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -22,7 +25,9 @@ import java.util.List;
 public class ChartSyncScheduler {
 
     private final ChartSyncService chartSyncService;
+    private final ChartService chartService;
     private final MarketRepository marketRepository;
+    private final ChartRedisService chartRedisService;
 
     // 지원하는 캔들 단위 목록 (단위: 분) → 일봉은 1440
     private static final List<Integer> UNITS = List.of(1, 5, 30, 60, 240, 1440);
@@ -44,9 +49,9 @@ public class ChartSyncScheduler {
         for (Market market : marketList) {
             for (Integer unit : UNITS) {
                 try {
+                    // 1) DB 동기화
                     // 해당 마켓 + 단위 조합에 대한 Sync 메타데이터 조회 또는 초기화
                     ChartSyncMeta syncMeta = chartSyncService.getOrInitSyncMeta(market, unit);
-
                     // 아직 FullSync가 안 된 경우 → 필요 수량 만큼 전체 캔들 동기화
                     if (!syncMeta.isFullSynced()) {
                         saveCount += chartSyncService.fullSync(syncMeta, market, unit);
@@ -55,6 +60,12 @@ public class ChartSyncScheduler {
                     else {
                         saveCount += chartSyncService.deltaSync(syncMeta, market, unit);
                     }
+
+                    // 2) MySQL에서 최신 200개 조회 → ChartService.fetchLatest 사용
+                    List<ChartResponse> ChartList = chartService.fetchLatest(market.getCoin(), unit, 200);
+
+                    // 3) Redis 저장
+                    chartRedisService.saveChartToRedis(market.getCoin(), unit, ChartList);
 
                     // 업비트 API 요청 간 120ms 딜레이 삽입 (Rate Limit 대응)
                     Thread.sleep(120);

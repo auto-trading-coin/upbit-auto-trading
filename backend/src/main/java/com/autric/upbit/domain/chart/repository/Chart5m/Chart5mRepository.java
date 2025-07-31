@@ -1,4 +1,4 @@
-package com.autric.upbit.domain.chart.repository;
+package com.autric.upbit.domain.chart.repository.Chart5m;
 
 import com.autric.upbit.domain.chart.entity.Chart5m;
 import com.autric.upbit.domain.chart.entity.Market;
@@ -8,7 +8,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
-public interface Chart5mRepository extends JpaRepository<Chart5m, Long> {
+public interface Chart5mRepository extends JpaRepository<Chart5m, Long>, Chart5mRepositoryCustom {
 
     /**
      * Market + Unit 기준으로 특정 시각 이후 캔들 데이터 조회 (오름차순)
