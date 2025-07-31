@@ -28,7 +28,7 @@ public enum ErrorCode implements ResponseCode {
         Member
      */
     MEMBER_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 사용자입니다."),
-
+    API_KEY_DELETE_CONFLICT(HttpStatus.CONFLICT, "자동매매가 활성화된 상태에서는 API 키를 삭제할 수 없습니다."),
 
     /*
         Token

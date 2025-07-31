@@ -113,6 +113,14 @@ public class Member {
     }
 
     /**
+     * 업비트 API KEY를 삭제하는 편의 메서드
+     */
+    public void deleteUpbitApiKey(){
+        this.accessKey = null;
+        this.secretKey = null;
+    }
+
+    /**
      * 매매 전략을 변경하는 편의 메서드
      */
     public void updateStrategy(Strategy strategy){

@@ -66,4 +66,15 @@ public class MemberController {
         return SuccessResponse.createSuccess(SuccessCode.REGISTER_UPBIT_API_KEY_SUCCESS);
     }
 
+    /**
+     * 사용자의 업비트 API KEY를 삭제하는 API
+     *
+     * 응답: 업비트 API KEY 삭제 여부
+     */
+    @DeleteMapping("/upbit-api-key")
+    public ResponseEntity<?> upbitApiKeyDelete(@AuthenticationPrincipal CustomOAuth2User user){
+        memberService.deleteUpbitApiKey(user);
+        return SuccessResponse.createSuccess(SuccessCode.DELETE_UPBIT_API_KEY_SUCCESS);
+    }
+
 }

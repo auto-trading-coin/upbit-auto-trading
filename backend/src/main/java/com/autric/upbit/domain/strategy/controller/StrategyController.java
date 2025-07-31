@@ -26,8 +26,8 @@ public class StrategyController {
      * 응답: 매매 전략 변경 성공 여부
      */
     @PatchMapping
-    public ResponseEntity<?> updateStrategy(@AuthenticationPrincipal CustomOAuth2User oAuth2User, @RequestBody StrategyUpdateRequest dto){
-        memberService.updateStrategy(oAuth2User, dto);
+    public ResponseEntity<?> updateStrategy(@AuthenticationPrincipal CustomOAuth2User user, @RequestBody StrategyUpdateRequest dto){
+        memberService.updateStrategy(user, dto);
         return SuccessResponse.createSuccess(SuccessCode.UPDATE_STRATEGY_SUCCESS);
     }
 }

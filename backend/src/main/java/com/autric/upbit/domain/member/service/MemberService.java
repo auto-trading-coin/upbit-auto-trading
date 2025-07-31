@@ -22,15 +22,15 @@ public class MemberService {
     private final MemberRepository memberRepository;
     private final StrategyRepository strategyRepository;
 
-    public MemberLoginResponse getLoginData(CustomOAuth2User oAuth2User){
-        Member member = oAuth2User.getMember();
+    public MemberLoginResponse getLoginData(CustomOAuth2User user){
+        Member member = user.getMember();
 
         return MemberLoginResponse.fromEntity(member);
     }
 
     @Transactional
-    public MemberTradeActiveResponse updateTradeActive(CustomOAuth2User oAuth2User, boolean status){
-        long memberId = oAuth2User.getMember().getId();
+    public MemberTradeActiveResponse updateTradeActive(CustomOAuth2User user, boolean status){
+        long memberId = user.getMember().getId();
 
         // member 객체를 JPA 영속 상태로 만들기 위해 DB 조회
         Member member = memberRepository.findById(memberId).orElseThrow(
@@ -64,12 +64,24 @@ public class MemberService {
     }
 
     @Transactional
-    public void updateStrategy(CustomOAuth2User oAuth2User, StrategyUpdateRequest dto){
+    public void deleteUpbitApiKey(CustomOAuth2User user){
+        Member member = memberRepository.findById(user.getMember().getId())
+                .orElseThrow(()-> new RestApiException(ErrorCode.MEMBER_NOT_FOUND));
+
+        // 자동매매가 실행중이라면 에러 발생
+        if(member.getTradeActive()) {
+            throw new RestApiException(ErrorCode.API_KEY_DELETE_CONFLICT);
+        }
+        member.deleteUpbitApiKey();
+    }
+
+    @Transactional
+    public void updateStrategy(CustomOAuth2User user, StrategyUpdateRequest dto){
         Long id = dto.getStrategyId();
         Strategy strategy = strategyRepository.findById(id)
                 .orElseThrow(() -> new RestApiException(ErrorCode.STRATEGY_NOT_FOUND));
 
-        Member member = memberRepository.findById(oAuth2User.getMember().getId())
+        Member member = memberRepository.findById(user.getMember().getId())
                 .orElseThrow(() -> new RestApiException(ErrorCode.MEMBER_NOT_FOUND));
 
         member.updateStrategy(strategy);
