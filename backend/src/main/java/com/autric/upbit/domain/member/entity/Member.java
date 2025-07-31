@@ -111,4 +111,11 @@ public class Member {
         this.accessKey = accessKey;
         this.secretKey = secretKey;
     }
+
+    /**
+     * 매매 전략을 변경하는 편의 메서드
+     */
+    public void updateStrategy(Strategy strategy){
+        this.strategy = strategy;
+    }
 }

@@ -42,7 +42,12 @@ public enum ErrorCode implements ResponseCode {
      */
     INVALID_UPBIT_API_KEY(HttpStatus.BAD_REQUEST, "유효하지 않은 업비트 API KEY 입니다"),
     DUPLICATE_UPBIT_API_KEY(HttpStatus.BAD_REQUEST, "중복된 API KEY 입니다."),
-    UPBIT_API_KEY_NOT_FOUND(HttpStatus.NOT_FOUND, "업비트 API KEY가 등록되지 않았습니다.");
+    UPBIT_API_KEY_NOT_FOUND(HttpStatus.NOT_FOUND, "업비트 API KEY가 등록되지 않았습니다."),
+
+    /*
+        Strategy
+     */
+    STRATEGY_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 전략입니다.");
 
     private final HttpStatus httpStatus;
     private final String message;

@@ -2,6 +2,9 @@ package com.autric.upbit.domain.member.service;
 
 import com.autric.upbit.domain.member.dto.response.MemberLoginResponse;
 import com.autric.upbit.domain.member.dto.response.MemberTradeActiveResponse;
+import com.autric.upbit.domain.strategy.dto.request.StrategyUpdateRequest;
+import com.autric.upbit.domain.strategy.entity.Strategy;
+import com.autric.upbit.domain.strategy.repository.StrategyRepository;
 import com.autric.upbit.external.upbit.dto.request.UpbitAuthRequest;
 import com.autric.upbit.global.response.code.ErrorCode;
 import com.autric.upbit.domain.member.entity.Member;
@@ -17,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class MemberService {
 
     private final MemberRepository memberRepository;
+    private final StrategyRepository strategyRepository;
 
     public MemberLoginResponse getLoginData(CustomOAuth2User oAuth2User){
         Member member = oAuth2User.getMember();
@@ -59,4 +63,15 @@ public class MemberService {
         member.setUpbitApiKey(accessKey, secretKey);  // 암호화 예정
     }
 
+    @Transactional
+    public void updateStrategy(CustomOAuth2User oAuth2User, StrategyUpdateRequest dto){
+        Long id = dto.getStrategyId();
+        Strategy strategy = strategyRepository.findById(id)
+                .orElseThrow(() -> new RestApiException(ErrorCode.STRATEGY_NOT_FOUND));
+
+        Member member = memberRepository.findById(oAuth2User.getMember().getId())
+                .orElseThrow(() -> new RestApiException(ErrorCode.MEMBER_NOT_FOUND));
+
+        member.updateStrategy(strategy);
+    }
 }

@@ -3,6 +3,9 @@ package com.autric.upbit.domain.strategy.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.util.HashSet;
+import java.util.Set;
+
 /**
  * 전략 Entity
  */
@@ -43,6 +46,13 @@ public class Strategy {
      */
     @Enumerated(EnumType.STRING)
     private StrategyType strategyType;
+
+    /**
+     * 전략에 사용되는 지표 목록
+     * ex) RSI, EMA, MACD, Bollinger Bands 등
+     */
+    @OneToMany(mappedBy = "strategy", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<StrategyIndicator> indicators = new HashSet<>();
 
     @Builder
     public Strategy(String name, String information, String conditions, StrategyType strategyType) {
