@@ -1,4 +1,4 @@
-package com.autric.upbit.domain.chart.repository;
+package com.autric.upbit.domain.chart.repository.Chart1d;
 
 import com.autric.upbit.domain.chart.entity.Chart1d;
 import com.autric.upbit.domain.chart.entity.Market;
@@ -8,7 +8,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
-public interface Chart1dRepository extends JpaRepository<Chart1d, Long> {
+public interface Chart1dRepository extends JpaRepository<Chart1d, Long>, Chart1dRepositoryCustom {
 
     /**
      * Market + Unit 기준으로 특정 시각 이후 캔들 데이터 조회 (오름차순)
@@ -28,4 +28,5 @@ public interface Chart1dRepository extends JpaRepository<Chart1d, Long> {
      * @return 최신 캔들 Optional
      */
     Optional<Chart1d> findFirstByMarketAndUnitOrderByCandleDateTimeKstDesc(Market market, Integer unit);
+
 }

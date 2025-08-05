@@ -1,7 +1,12 @@
 package com.autric.upbit.domain.chart.sync;
 
 import com.autric.upbit.domain.chart.entity.*;
-import com.autric.upbit.domain.chart.repository.*;
+import com.autric.upbit.domain.chart.repository.Chart1d.Chart1dRepository;
+import com.autric.upbit.domain.chart.repository.Chart1m.Chart1mRepository;
+import com.autric.upbit.domain.chart.repository.Chart240m.Chart240mRepository;
+import com.autric.upbit.domain.chart.repository.Chart30m.Chart30mRepository;
+import com.autric.upbit.domain.chart.repository.Chart5m.Chart5mRepository;
+import com.autric.upbit.domain.chart.repository.Chart60m.Chart60mRepository;
 import com.autric.upbit.external.upbit.dto.response.UpbitCandleResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
