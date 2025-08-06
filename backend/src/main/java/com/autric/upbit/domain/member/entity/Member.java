@@ -96,4 +96,34 @@ public class Member {
     public boolean hasStrategy(){
         return strategy != null;
     }
+
+    /**
+     * 자동매매 상태를 변경하는 편의 메서드
+     */
+    public void updateTradeActive(boolean status) {
+        this.tradeActive = status;
+    }
+
+    /**
+     * 업비트 API KEY를 등록하는 편의 메서드
+     */
+    public void setUpbitApiKey(String accessKey, String secretKey){
+        this.accessKey = accessKey;
+        this.secretKey = secretKey;
+    }
+
+    /**
+     * 업비트 API KEY를 삭제하는 편의 메서드
+     */
+    public void deleteUpbitApiKey(){
+        this.accessKey = null;
+        this.secretKey = null;
+    }
+
+    /**
+     * 매매 전략을 변경하는 편의 메서드
+     */
+    public void updateStrategy(Strategy strategy){
+        this.strategy = strategy;
+    }
 }

@@ -28,14 +28,26 @@ public enum ErrorCode implements ResponseCode {
         Member
      */
     MEMBER_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 사용자입니다."),
-
+    API_KEY_DELETE_CONFLICT(HttpStatus.CONFLICT, "자동매매가 활성화된 상태에서는 API 키를 삭제할 수 없습니다."),
 
     /*
         Token
      */
     EXPIRED_TOKEN(HttpStatus.UNAUTHORIZED, "토큰이 만료 되었습니다."),
     INVALID_TOKEN(HttpStatus.BAD_REQUEST, "잘못된 토큰입니다."),
-    UNSUPPORTED_TOKEN(HttpStatus.FORBIDDEN, "잘못된 토큰입니다.");
+    UNSUPPORTED_TOKEN(HttpStatus.FORBIDDEN, "잘못된 토큰입니다."),
+
+    /*
+        Upbit
+     */
+    INVALID_UPBIT_API_KEY(HttpStatus.BAD_REQUEST, "유효하지 않은 업비트 API KEY 입니다"),
+    DUPLICATE_UPBIT_API_KEY(HttpStatus.BAD_REQUEST, "중복된 API KEY 입니다."),
+    UPBIT_API_KEY_NOT_FOUND(HttpStatus.NOT_FOUND, "업비트 API KEY가 등록되지 않았습니다."),
+
+    /*
+        Strategy
+     */
+    STRATEGY_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 전략입니다.");
 
     private final HttpStatus httpStatus;
     private final String message;
