@@ -52,6 +52,12 @@ spring:
     access-expired: ${ACCESS_EXPIRED}
     refresh-expired: ${REFRESH_EXPIRED}
 
+  kafka:
+    bootstrap-servers: ${KAFKA_SERVER_IP}  # Kafka 서버 접속 주소
+    consumer:
+      group-id: ${KAFKA_GROUP_ID}  # 컨슈머 그룹 식별자
+      auto-offset-reset: earliest  # 초기 오프셋(가장 처음 메세지부터 소비)
+
   devtools:
     restart:
       enabled: true

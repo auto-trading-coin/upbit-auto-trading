@@ -77,7 +77,9 @@ public class ChartSyncScheduler {
                 }
             }
         }
-
+        /**
+         * 이 위치에 카프카 메세지 전송
+         * */
         log.info("ChartSyncScheduler 종료 → 전체 동기화 완료 {} 건 저장 완료", saveCount);
     }
 }
