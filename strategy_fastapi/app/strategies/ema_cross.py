@@ -7,7 +7,7 @@ app/stratege/ema_cross.py
 """
 from typing import List, Optional, Dict
 from ..models.strategy_base import Strategy
-from ..schema.models import Candle, StrategyResult, Decision
+from ..schemas.models import Candle, StrategyResult, Decision
 
 class EMACross(Strategy):
     def __init__(self, fast: int = 9, slow: int = 21):

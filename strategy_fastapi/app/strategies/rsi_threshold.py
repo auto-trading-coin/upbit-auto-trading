@@ -7,7 +7,7 @@ app/stratege/rsi_threshold.py
 """
 from typing import List, Dict
 from ..models.strategy_base import Strategy
-from ..schema.models import Candle, StrategyResult, Decision
+from ..schemas.models import Candle, StrategyResult, Decision
 
 class RSIThreshold(Strategy):
     def __init__(self, oversold: float = 30.0, overbought: float = 70.0):
