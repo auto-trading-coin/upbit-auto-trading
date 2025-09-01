@@ -11,7 +11,8 @@ from app.strategies.rsi_threshold import RSIThreshold
 from app.strategies.ema_cross import EMACross
 
 def get_registered_strategies() -> List[Strategy]:
+    """등록된 모든 전략 인스턴스 반환"""
     return [
-        RSIThreshold(oversold=30.0, overbought=70.0),
-        EMACross(fast=9, slow=21),
+        RSIThreshold(strategy_id=1, oversold=30.0, overbought=70.0),
+        EMACross(strategy_id=2, fast=9, slow=21),
     ]

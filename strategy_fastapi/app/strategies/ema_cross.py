@@ -9,8 +9,8 @@ from ..models.strategy_base import Strategy
 from ..schemas.models import Candle, StrategyResult, Decision
 
 class EMACross(Strategy):
-    def __init__(self, fast: int = 9, slow: int = 21):
-        self.id = 1
+    def __init__(self, strategy_id: int = 2, fast: int = 9, slow: int = 21):
+        self.id = strategy_id
         self.name = f"EMA({fast}/{slow}) Cross"
         self.fast = fast
         self.slow = slow
@@ -34,11 +34,23 @@ class EMACross(Strategy):
                 decision = Decision.BUY
             elif f < s:
                 decision = Decision.SELL
-        return StrategyResult(strategy_name=self.name, market=market, unit=unit, decision=decision)
+        return StrategyResult(
+            strategy_id=self.id,
+            strategy_name=self.name, 
+            market=market, 
+            unit=unit, 
+            decision=decision
+        )
 
     def evaluate_mtf(self, market: str, data_by_unit: Dict[int, List[Candle]]) -> StrategyResult:
         if not data_by_unit:
-            return StrategyResult(strategy_name=self.name, market=market, unit=1, decision=Decision.HOLD)
+            return StrategyResult(
+                strategy_id=self.id,
+                strategy_name=self.name, 
+                market=market, 
+                unit=1, 
+                decision=Decision.HOLD
+            )
         units_sorted = sorted(data_by_unit.keys())
         votes = []
         for u in units_sorted:
@@ -49,4 +61,10 @@ class EMACross(Strategy):
             dec = Decision.SELL
         else:
             dec = Decision.HOLD
-        return StrategyResult(strategy_id = self.id, strategy_name=self.name, market=market, unit=units_sorted[0], decision=dec)
+        return StrategyResult(
+            strategy_id=self.id, 
+            strategy_name=self.name, 
+            market=market, 
+            unit=units_sorted[0], 
+            decision=dec
+        )

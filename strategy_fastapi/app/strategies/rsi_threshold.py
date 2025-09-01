@@ -9,7 +9,8 @@ from ..models.strategy_base import Strategy
 from ..schemas.models import Candle, StrategyResult, Decision
 
 class RSIThreshold(Strategy):
-    def __init__(self, oversold: float = 30.0, overbought: float = 70.0):
+    def __init__(self, strategy_id: int = 1, oversold: float = 30.0, overbought: float = 70.0):
+        self.id = strategy_id
         self.name = f"RSI({oversold}/{overbought})"
         self.oversold = oversold
         self.overbought = overbought
@@ -42,7 +43,13 @@ class RSIThreshold(Strategy):
             decision = Decision.BUY
         elif r >= self.overbought:
             decision = Decision.SELL
-        return StrategyResult(strategy_name=self.name, market=market, unit=unit, decision=decision)
+        return StrategyResult(
+            strategy_id=self.id,
+            strategy_name=self.name, 
+            market=market, 
+            unit=unit, 
+            decision=decision
+        )
 
     def evaluate_mtf(self, market: str, data_by_unit: Dict[int, List[Candle]]) -> StrategyResult:
         """
@@ -62,4 +69,10 @@ class RSIThreshold(Strategy):
             dec = Decision.SELL
         else:
             dec = Decision.HOLD
-        return StrategyResult(strategy_name=self.name, market=market, unit=units_sorted[0], decision=dec)
+        return StrategyResult(
+            strategy_id=self.id,
+            strategy_name=self.name, 
+            market=market, 
+            unit=units_sorted[0], 
+            decision=dec
+        )

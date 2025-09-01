@@ -31,16 +31,22 @@ class Candle(BaseModel):
     unit: Optional[int] = None
 
 class StrategyResult(BaseModel):
-    strategy_id: int     # DB PK or UUID
+    strategy_id: Optional[int] = None  # DB PK or UUID (선택적)
     strategy_name: str   # 사람이 보기 위한 이름
     market: str
+    unit: int           # 대표 시간 단위
     decision: Decision
 
     def to_signal(self) -> "Signal":
-        return Signal(strategy=self.strategy_name, market=self.market, decision=self.decision)
+        return Signal(
+            strategy_id=self.strategy_id,
+            strategy_name=self.strategy_name, 
+            market=self.market, 
+            decision=self.decision
+        )
 
 class Signal(BaseModel):
-    strategy_id: int     # DB PK or UUID
+    strategy_id: Optional[int] = None  # DB PK or UUID (선택적)
     strategy_name: str   # 사람이 보기 위한 이름
     market: str
     decision: Decision
