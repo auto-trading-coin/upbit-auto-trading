@@ -2,10 +2,10 @@
 app/core/dependencies.py
 - 의존성 주입 팩토리 함수 정의
 - FastAPI의 Depends()에서 사용
-- 완전한 의존성 주입 통일화
+- 모듈 레벨 싱글톤 패턴 적용 (Spring @Component 스타일)
 """
 
-from typing import List
+from typing import List, Optional
 from confluent_kafka import Producer
 from fastapi import Depends
 from redis import Redis
@@ -20,25 +20,51 @@ from app.publishers.port import SignalPublisherPort
 from app.models.strategy_base import Strategy
 
 # =============================================================================
-# Infrastructure Layer Dependencies (가장 하위 계층)
+# Module-level Singletons (Spring @Component 스타일)
 # =============================================================================
 
-def get_redis_client() -> Redis:
-    """Redis 클라이언트 생성"""
+# 모듈 레벨 전역 변수 (싱글톤 인스턴스)
+_redis_client: Optional[Redis] = None
+_kafka_producer: Optional[Producer] = None
+
+def _create_redis_client() -> Redis:
+    """Redis 클라이언트 생성 (내부 함수)"""
     return Redis.from_url(settings.redis_url)
 
-def get_kafka_producer() -> Producer:
-    """Kafka Producer 생성"""
+def _create_kafka_producer() -> Producer:
+    """Kafka Producer 생성 (내부 함수)"""
     return Producer({
         "bootstrap.servers": settings.kafka_bootstrap_servers,
         "client.id": settings.app_name,
+        "acks": "1",
+        "retries": 3,
     })
+
+# =============================================================================
+# Infrastructure Layer Dependencies (Singleton)
+# =============================================================================
+
+def get_redis_client() -> Redis:
+    """Redis 클라이언트 싱글톤"""
+    global _redis_client
+    if _redis_client is None:
+        _redis_client = _create_redis_client()
+    return _redis_client
+
+def get_kafka_producer() -> Producer:
+    """Kafka Producer 싱글톤"""
+    global _kafka_producer
+    if _kafka_producer is None:
+        _kafka_producer = _create_kafka_producer()
+    return _kafka_producer
 
 # =============================================================================
 # Repository Layer Dependencies (Infrastructure 의존)
 # =============================================================================
 
-def get_chart_repository( redis_client: Redis = Depends(get_redis_client)) -> ChartRedisRepository:
+def get_chart_repository(
+    redis_client: Redis = Depends(get_redis_client)
+) -> ChartRedisRepository:
     """차트 데이터 레포지토리"""
     return ChartRedisRepository(
         redis_client=redis_client,
@@ -49,7 +75,9 @@ def get_chart_repository( redis_client: Redis = Depends(get_redis_client)) -> Ch
 # Publisher Layer Dependencies (Infrastructure 의존)
 # =============================================================================
 
-def get_signal_publisher( producer: Producer = Depends(get_kafka_producer) ) -> SignalPublisherPort:
+def get_signal_publisher(
+    producer: Producer = Depends(get_kafka_producer)
+) -> SignalPublisherPort:
     """시그널 발행자"""
     return KafkaSignalPublisher(
         producer=producer, 
@@ -80,3 +108,28 @@ def get_signal_service(
 ) -> SignalService:
     """시그널 발행 서비스"""
     return SignalService(publisher=publisher)
+
+# =============================================================================
+# Cleanup Functions (애플리케이션 종료 시 사용)
+# =============================================================================
+
+def cleanup_singletons():
+    """싱글톤 인스턴스 정리"""
+    global _redis_client, _kafka_producer
+    
+    if _redis_client:
+        try:
+            _redis_client.close()
+        except Exception:
+            pass
+        finally:
+            _redis_client = None
+    
+    if _kafka_producer:
+        try:
+            _kafka_producer.flush()
+            _kafka_producer.close()
+        except Exception:
+            pass
+        finally:
+            _kafka_producer = None
