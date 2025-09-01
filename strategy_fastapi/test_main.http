@@ -1,11 +1,20 @@
-# Test your FastAPI endpoints
+### Health Check
+GET http://localhost:8000/health
 
-GET http://127.0.0.1:8000/
-Accept: application/json
+### Root endpoint
+GET http://localhost:8000/
 
-###
+### List registered strategies
+GET http://localhost:8000/api/v1/strategies
 
-GET http://127.0.0.1:8000/hello/User
-Accept: application/json
+### Test price update event for specific market
+POST http://localhost:8000/api/v1/events/price-updated/KRW-BTC
 
-###
+### Test price update event for another market
+POST http://localhost:8000/api/v1/events/price-updated/KRW-ETH
+
+### Get market chart data (debugging)
+GET http://localhost:8000/api/v1/markets/KRW-BTC/data
+
+### Test with invalid market
+POST http://localhost:8000/api/v1/events/price-updated/INVALID-MARKET

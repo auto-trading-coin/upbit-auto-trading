@@ -1,6 +1,5 @@
-
 """
-app/stratege/ema_cross.py
+app/strategies/ema_cross.py
 - EMA(9/21) 교차 전략 예시.
 - evaluate: 단일 TF fast EMA > slow EMA -> BUY, fast < slow -> SELL, else HOLD.
 - evaluate_mtf: 모든 TF 판단을 합의 규칙으로 통합 (전부 BUY => BUY, 전부 SELL => SELL, else HOLD).
@@ -11,6 +10,7 @@ from ..schemas.models import Candle, StrategyResult, Decision
 
 class EMACross(Strategy):
     def __init__(self, fast: int = 9, slow: int = 21):
+        self.id = 1
         self.name = f"EMA({fast}/{slow}) Cross"
         self.fast = fast
         self.slow = slow
@@ -49,4 +49,4 @@ class EMACross(Strategy):
             dec = Decision.SELL
         else:
             dec = Decision.HOLD
-        return StrategyResult(strategy_name=self.name, market=market, unit=units_sorted[0], decision=dec)
+        return StrategyResult(strategy_id = self.id, strategy_name=self.name, market=market, unit=units_sorted[0], decision=dec)

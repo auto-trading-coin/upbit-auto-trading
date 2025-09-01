@@ -1,6 +1,5 @@
-
 """
-app/stratege/rsi_threshold.py
+app/strategies/rsi_threshold.py
 - RSI 임계값 전략 예시.
 - evaluate: 단일 TF RSI 로 BUY/SELL/HOLD 판단.
 - evaluate_mtf: 모든 TF의 판단을 모아 "전부 BUY면 BUY, 전부 SELL이면 SELL, 아니면 HOLD" 합의 규칙.

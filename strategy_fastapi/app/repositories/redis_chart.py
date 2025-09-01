@@ -8,11 +8,12 @@ import json
 from typing import Dict, List
 from redis import Redis
 from app.schemas.models import Candle
+from app.core.settings import settings
 
 class ChartRedisRepository:
     def __init__(self, redis_client: Redis = None, scan_count: int = 1000):
-        self.redis = redis_client or Redis.from_url("redis://localhost:6379/0")
-        self.scan_count = scan_count
+        self.redis = redis_client or Redis.from_url(settings.redis_url)
+        self.scan_count = scan_count or settings.redis_scan_count
 
     def load_all_units(self, market: str) -> Dict[int, List[Candle]]:
         keys = self.redis.scan_iter(match=f"chart:{market}:*")

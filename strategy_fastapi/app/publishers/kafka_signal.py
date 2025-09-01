@@ -6,7 +6,6 @@ app/publishers/kafka_signal.py
 
 from app.publishers.port import SignalPublisherPort
 from app.schemas.models import Signal
-import json
 from confluent_kafka import Producer
 
 class KafkaSignalPublisher(SignalPublisherPort):
@@ -15,6 +14,6 @@ class KafkaSignalPublisher(SignalPublisherPort):
         self.topic = topic
 
     def publish(self, signal: Signal) -> None:
-        payload = signal.json()
+        payload = signal.model_dump_json()
         self.producer.produce(self.topic, payload)
         self.producer.flush()

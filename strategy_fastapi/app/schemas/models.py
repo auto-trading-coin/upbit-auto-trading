@@ -31,7 +31,8 @@ class Candle(BaseModel):
     unit: Optional[int] = None
 
 class StrategyResult(BaseModel):
-    strategy_name: str
+    strategy_id: int     # DB PK or UUID
+    strategy_name: str   # 사람이 보기 위한 이름
     market: str
     decision: Decision
 
@@ -39,7 +40,8 @@ class StrategyResult(BaseModel):
         return Signal(strategy=self.strategy_name, market=self.market, decision=self.decision)
 
 class Signal(BaseModel):
-    strategy: str
+    strategy_id: int     # DB PK or UUID
+    strategy_name: str   # 사람이 보기 위한 이름
     market: str
     decision: Decision
 
