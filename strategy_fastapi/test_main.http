@@ -1,20 +1,14 @@
-### Health Check
-GET http://localhost:8000/health
-
-### Root endpoint
-GET http://localhost:8000/
-
-### List registered strategies
-GET http://localhost:8000/api/v1/strategies
-
 ### Test price update event for specific market
-POST http://localhost:8000/api/v1/events/price-updated/KRW-BTC
+POST http://localhost:8000/events/price-updated/KRW-BTC
 
-### Test price update event for another market
-POST http://localhost:8000/api/v1/events/price-updated/KRW-ETH
-
-### Get market chart data (debugging)
-GET http://localhost:8000/api/v1/markets/KRW-BTC/data
+### Test price update event for another market  
+POST http://localhost:8000/events/price-updated/KRW-ETH
 
 ### Test with invalid market
-POST http://localhost:8000/api/v1/events/price-updated/INVALID-MARKET
+POST http://localhost:8000/events/price-updated/INVALID-MARKET
+
+### FastAPI 자동 문서화 확인
+GET http://localhost:8000/docs
+
+### OpenAPI JSON 스키마 확인
+GET http://localhost:8000/openapi.json

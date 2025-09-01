@@ -8,6 +8,7 @@ from typing import List
 from confluent_kafka import Producer
 from fastapi import Depends
 
+from app.core.settings import settings
 from app.repositories.redis_chart import ChartRedisRepository
 from app.publishers.kafka_signal import KafkaSignalPublisher
 from app.models.registry import get_registered_strategies
@@ -20,8 +21,8 @@ def get_chart_repository() -> ChartRedisRepository:
     return ChartRedisRepository()
 
 def get_signal_publisher() -> SignalPublisherPort:
-    producer = Producer({"bootstrap.servers": "localhost:9092"})
-    return KafkaSignalPublisher(producer, topic="signal.out")
+    producer = Producer({"bootstrap.servers": settings.kafka_bootstrap_servers})
+    return KafkaSignalPublisher(producer, topic=settings.kafka_signal_topic)
 
 def get_all_strategies() -> List[Strategy]:
     return get_registered_strategies()
