@@ -4,7 +4,6 @@ app/core/settings.py
 - 모든 외부 연결 설정 및 애플리케이션 설정을 중앙화
 """
 from pydantic_settings import BaseSettings
-from typing import Optional
 
 class Settings(BaseSettings):
     # Redis 설정
