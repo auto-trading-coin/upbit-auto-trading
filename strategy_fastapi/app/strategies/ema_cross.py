@@ -10,7 +10,7 @@ from ..schemas.models import Candle, StrategyResult, Decision
 
 class EMACross(Strategy):
     def __init__(self, strategy_id: int = 2, fast: int = 9, slow: int = 21):
-        self.id = strategy_id
+        self.strategy_id = strategy_id
         self.name = f"EMA({fast}/{slow}) Cross"
         self.fast = fast
         self.slow = slow

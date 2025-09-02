@@ -10,7 +10,7 @@ from ..schemas.models import Candle, StrategyResult, Decision
 
 class RSIThreshold(Strategy):
     def __init__(self, strategy_id: int = 1, oversold: float = 30.0, overbought: float = 70.0):
-        self.id = strategy_id
+        self.strategy_id = strategy_id
         self.name = f"RSI({oversold}/{overbought})"
         self.oversold = oversold
         self.overbought = overbought
