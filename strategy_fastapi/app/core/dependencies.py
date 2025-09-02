@@ -16,6 +16,7 @@ from app.publishers.kafka_signal import KafkaSignalPublisher
 from app.models.registry import get_registered_strategies
 from app.services.orchestrator import Orchestrator
 from app.services.signal_service import SignalService
+from app.services.kafka_consumer import KafkaConsumerService
 from app.publishers.port import SignalPublisherPort
 from app.models.strategy_base import Strategy
 
@@ -108,6 +109,19 @@ def get_signal_service(
 ) -> SignalService:
     """시그널 발행 서비스"""
     return SignalService(publisher=publisher)
+
+def get_kafka_consumer_service(
+    orchestrator: Orchestrator = Depends(get_orchestrator),
+    signal_service: SignalService = Depends(get_signal_service),
+) -> KafkaConsumerService:
+    """카프카 컨슈머 서비스"""
+    return KafkaConsumerService(
+        orchestrator=orchestrator,
+        signal_service=signal_service,
+        bootstrap_servers=settings.kafka_bootstrap_servers,
+        topic="price.update",
+        group_id="strategy-service"
+    )
 
 # =============================================================================
 # Cleanup Functions (애플리케이션 종료 시 사용)

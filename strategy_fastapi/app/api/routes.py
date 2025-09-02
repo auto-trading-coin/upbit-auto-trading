@@ -19,3 +19,25 @@ def on_price_updated(
     results = orchestrator.run_for_market(market)
     emitted = signal_service.publish_from_results(results)
     return {"market": market, "emitted": len(emitted), "signals": emitted}
+
+@router.get("/health")
+def health_check():
+    """헬스 체크 엔드포인트"""
+    return {"status": "healthy"}
+
+
+@router.post("/consumer/start")
+def start_kafka_consumer():
+    """Kafka 컨슈머 시작 (테스트용)"""
+    import threading
+    from app.core.dependencies import get_kafka_consumer_service
+    
+    def run_consumer():
+        consumer_service = get_kafka_consumer_service()
+        consumer_service.start_consuming()
+    
+    # 별도 스레드에서 컨슈머 실행
+    thread = threading.Thread(target=run_consumer, daemon=True)
+    thread.start()
+    
+    return {"status": "Kafka consumer started in background"}

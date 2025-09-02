@@ -63,5 +63,10 @@ class Signal(BaseModel):
 
 class PriceUpdateEvent(BaseModel):
     eventId: str
+    ts: str  # ISO 8601 timestamp
+    market: str
+
+class PriceUpdateEvent(BaseModel):
+    eventId: str
     ts: str
     market: str
