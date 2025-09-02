@@ -24,20 +24,20 @@ class EMACross(Strategy):
             ema = x * k + ema * (1 - k)
         return ema
 
-    def evaluate(self, market: str, unit: int, candles: List[Candle]) -> StrategyResult:
-        closes = [c.trade_price for c in candles]
+    def evaluate(self, market: str, unit: int, data: List[Candle]) -> StrategyResult:
+        closes = [c.close for c in data]
         f = self._ema(closes, self.fast)
         s = self._ema(closes, self.slow)
         decision = Decision.HOLD
         if f is not None and s is not None:
             if f > s:
-                decision = Decision.BUY
+                decision = Decision.BID
             elif f < s:
-                decision = Decision.SELL
+                decision = Decision.ASK
         return StrategyResult(
-            strategy_id=self.id,
-            strategy_name=self.name, 
-            market=market, 
+            strategy_id=self.strategy_id, 
+            strategy_name=self.name,
+            market=market,
             unit=unit, 
             decision=decision
         )
@@ -45,9 +45,9 @@ class EMACross(Strategy):
     def evaluate_mtf(self, market: str, data_by_unit: Dict[int, List[Candle]]) -> StrategyResult:
         if not data_by_unit:
             return StrategyResult(
-                strategy_id=self.id,
-                strategy_name=self.name, 
-                market=market, 
+                strategy_id=self.strategy_id,
+                strategy_name=self.name,
+                market=market,
                 unit=1, 
                 decision=Decision.HOLD
             )
@@ -55,16 +55,16 @@ class EMACross(Strategy):
         votes = []
         for u in units_sorted:
             votes.append(self.evaluate(market, u, data_by_unit[u]).decision)
-        if all(v == Decision.BUY for v in votes):
-            dec = Decision.BUY
-        elif all(v == Decision.SELL for v in votes):
-            dec = Decision.SELL
+        if all(v == Decision.BID for v in votes):
+            dec = Decision.BID
+        elif all(v == Decision.ASK for v in votes):
+            dec = Decision.ASK
         else:
             dec = Decision.HOLD
         return StrategyResult(
-            strategy_id=self.id, 
-            strategy_name=self.name, 
-            market=market, 
-            unit=units_sorted[0], 
+            strategy_id=self.strategy_id,
+            strategy_name=self.name,
+            market=market,
+            unit=units_sorted[0],
             decision=dec
         )
