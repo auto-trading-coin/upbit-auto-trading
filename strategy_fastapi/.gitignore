@@ -397,7 +397,7 @@ poetry.toml
 # LSP config files
 pyrightconfig.json
 
-# .serena MCP
+# MCP , LLM
 .serena
-
+.claude
 # End of https://www.toptal.com/developers/gitignore/api/node,intellij+iml,python
