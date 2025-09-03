@@ -7,12 +7,16 @@ import com.autric.upbit.domain.chart.repository.MarketRepository;
 import com.autric.upbit.domain.chart.service.ChartRedisService;
 import com.autric.upbit.domain.chart.service.ChartService;
 import com.autric.upbit.domain.chart.service.ChartSyncService;
+import com.autric.upbit.external.kafka.dto.PriceUpdateEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
+import java.time.Instant;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * ChartSyncScheduler
@@ -28,6 +32,7 @@ public class ChartSyncScheduler {
     private final ChartService chartService;
     private final MarketRepository marketRepository;
     private final ChartRedisService chartRedisService;
+    private final KafkaTemplate<String, Object> kafkaTemplate;
 
     // 지원하는 캔들 단위 목록 (단위: 분) → 일봉은 1440
     private static final List<Integer> UNITS = List.of(1, 5, 30, 60, 240, 1440);
@@ -47,6 +52,7 @@ public class ChartSyncScheduler {
         int saveCount =0;
 
         for (Market market : marketList) {
+            int cnt = 0;
             for (Integer unit : UNITS) {
                 try {
                     // 1) DB 동기화
@@ -54,11 +60,11 @@ public class ChartSyncScheduler {
                     ChartSyncMeta syncMeta = chartSyncService.getOrInitSyncMeta(market, unit);
                     // 아직 FullSync가 안 된 경우 → 필요 수량 만큼 전체 캔들 동기화
                     if (!syncMeta.isFullSynced()) {
-                        saveCount += chartSyncService.fullSync(syncMeta, market, unit);
+                        cnt += chartSyncService.fullSync(syncMeta, market, unit);
                     }
                     // 이미 FullSync가 완료된 경우 → 최신 데이터만 DeltaSync로 갱신
                     else {
-                        saveCount += chartSyncService.deltaSync(syncMeta, market, unit);
+                        cnt += chartSyncService.deltaSync(syncMeta, market, unit);
                     }
 
                     // 2) MySQL에서 최신 200개 조회 → ChartService.fetchLatest 사용
@@ -76,10 +82,19 @@ public class ChartSyncScheduler {
                             market.getCoin(), unit, e.getMessage(), e);
                 }
             }
+            if(cnt > 0){
+                /**
+                 * 마켓 별 카프카 메세지 전송
+                 * */
+                PriceUpdateEvent event = PriceUpdateEvent.builder()
+                        .eventId(UUID.randomUUID().toString())
+                        .market(market.getCoin())
+                        .ts(Instant.now())
+                        .build();
+                kafkaTemplate.send("price.update", market.getCoin(), event);
+            }
+            saveCount += cnt;
         }
-        /**
-         * 이 위치에 카프카 메세지 전송
-         * */
         log.info("ChartSyncScheduler 종료 → 전체 동기화 완료 {} 건 저장 완료", saveCount);
     }
 }
