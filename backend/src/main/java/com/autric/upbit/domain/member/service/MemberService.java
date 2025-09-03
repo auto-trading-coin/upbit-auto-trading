@@ -38,7 +38,9 @@ public class MemberService {
         );
 
         // 자동매매를 실행했지만, 업비트 api키가 등록되지 않은 상태
-        if(status && member.getAccessKey() == null) throw new RestApiException(ErrorCode.UPBIT_API_KEY_NOT_FOUND);
+        if(status && member.getAccessKey() == null) {
+            throw new RestApiException(ErrorCode.UPBIT_API_KEY_NOT_FOUND);
+        }
 
         // 더티체킹으로 인해 변경사항 발생 시 자동으로 DB 반영
         member.updateTradeActive(status);
@@ -68,7 +70,7 @@ public class MemberService {
         Member member = memberRepository.findById(user.getMember().getId())
                 .orElseThrow(()-> new RestApiException(ErrorCode.MEMBER_NOT_FOUND));
 
-        // 자동매매가 실행중이라면 에러 발생
+        // 자동매매가 실행 중인 경우 예외 처리
         if(member.getTradeActive()) {
             throw new RestApiException(ErrorCode.API_KEY_DELETE_CONFLICT);
         }
@@ -78,11 +80,14 @@ public class MemberService {
     @Transactional
     public void updateStrategy(CustomOAuth2User user, StrategyUpdateRequest dto){
         Long id = dto.getStrategyId();
+        // 존재하지 않는 유저
+        Member member = memberRepository.findById(user.getMember().getId())
+                .orElseThrow(() -> new RestApiException(ErrorCode.MEMBER_NOT_FOUND));
+
+        // 존재하지 않는 전략
         Strategy strategy = strategyRepository.findById(id)
                 .orElseThrow(() -> new RestApiException(ErrorCode.STRATEGY_NOT_FOUND));
 
-        Member member = memberRepository.findById(user.getMember().getId())
-                .orElseThrow(() -> new RestApiException(ErrorCode.MEMBER_NOT_FOUND));
 
         member.updateStrategy(strategy);
     }
