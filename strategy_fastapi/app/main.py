@@ -1,35 +1,55 @@
-
 """
 app/main.py
-- FastAPI 애플리케이션의 진입점입니다.
-- 의존성( Redis 클라이언트, 퍼블리셔, 오케스트레이터 )을 생성하여 app.state 에 보관합니다.
-- 라우터를 등록하고 /health 를 제공합니다.
-- 주의: app.state.* 는 런타임 동적 속성이므로 IDE 경고가 있을 수 있으나 동작에는 문제가 없습니다.
+- FastAPI 앱 구성
+- 라우터 포함 및 실행 설정
 """
+import logging
 from fastapi import FastAPI
-from redis import Redis
-from .core.settings import settings
-from .service.orchestrator import Orchestrator
-from .service.dummy_publisher import DummyPublisher
-from .api.routes import router as api_router
+from contextlib import asynccontextmanager
+from app.core.settings import settings
+from app.core.dependencies import get_redis_client, cleanup_singletons
+from app.api.routes import router as main_router
 
-# ----- 애플리케이션 생성 -----
-app = FastAPI(title="Strategy Server (MTF, Kafka-agnostic, Upbit fields)")
+logger = logging.getLogger(__name__)
+logging.basicConfig(
+    level=getattr(logging, settings.log_level.upper()),
+    format="%(asctime)s [%(levelname)s] %(name)s - %(message)s"
+)
 
-# ----- 인프라 준비 (실서비스에선 DI 프레임워크로 대체 가능) -----
-redis_client = Redis.from_url(settings.redis_url)
-publisher = DummyPublisher()  # 카프카 연결 시 DummyPublisher -> KafkaPublisher 로 교체
-orchestrator = Orchestrator(redis_client, publisher)
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup: 인프라 연결 검증 (객체는 생성하지 않음)
+    try:
+        from redis import Redis
+        from confluent_kafka import Producer
+        
+        # Redis 연결 검증
+        redis_test = Redis.from_url(settings.redis_url)
+        redis_test.ping()
+        redis_test.close()
+        logger.info("[Startup] Redis 연결 검증 성공")
+        
+        # Kafka Producer 연결 검증
+        kafka_test = Producer({
+            'bootstrap.servers': settings.kafka_bootstrap_servers,
+            'client.id': f"{settings.app_name}-validation"
+        })
+        kafka_test.flush(timeout=1.0)
+        logger.info("[Startup] Kafka Producer 연결 검증 성공")
+        
+        logger.info("[Startup] 모든 인프라 연결 검증 완료")
+        
+    except Exception as e:
+        logger.error(f"[Startup] 인프라 연결 실패: {e}")
+        raise RuntimeError(f"인프라 연결 실패: {e}")
+    
+    yield
+    
+    # Shutdown: 싱글톤 정리
+    logger.info("[Shutdown] 싱글톤 정리 시작")
+    cleanup_singletons()
+    logger.info("[Shutdown] 싱글톤 정리 완료")
 
-# ----- 런타임 DI 컨테이너로서 app.state 사용 -----
-app.state.redis = redis_client
-app.state.publisher = publisher
-app.state.orchestrator = orchestrator
+app = FastAPI(title=settings.app_name, lifespan=lifespan)
 
-# ----- 헬스체크 -----
-@app.get("/health")
-def health():
-    return {"status": "ok"}
-
-# ----- 라우터 등록 -----
-app.include_router(api_router, prefix="")
+app.include_router(main_router)

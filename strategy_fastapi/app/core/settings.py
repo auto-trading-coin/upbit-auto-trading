@@ -1,14 +1,28 @@
-
 """
 app/core/settings.py
 - .env 또는 환경변수에서 설정을 불러옵니다.
-- REDIS_URL, REDIS_SCAN_COUNT 만 노출했습니다. 필요시 확장하세요.
+- 모든 외부 연결 설정 및 애플리케이션 설정을 중앙화
 """
 from pydantic_settings import BaseSettings
-import os
 
 class Settings(BaseSettings):
-    redis_url: str = os.getenv("REDIS_URL", "redis://localhost:6379/0")
-    redis_scan_count: int = int(os.getenv("REDIS_SCAN_COUNT", "1000"))
+    # Redis 설정
+    redis_url: str = "redis://localhost:6379/0"
+    redis_scan_count: int = 1000
+    
+    # Kafka 설정
+    kafka_bootstrap_servers: str = "localhost:9092"
+    kafka_signal_topic: str = "signal.out"
+    
+    # 로깅 설정
+    log_level: str = "INFO"
+    
+    # 애플리케이션 설정
+    app_name: str = "Strategy FastAPI"
+    app_version: str = "1.0.0"
+
+    class Config:
+        env_file = ".env"
+        env_file_encoding = "utf-8"
 
 settings = Settings()

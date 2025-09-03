@@ -1,11 +1,14 @@
-# Test your FastAPI endpoints
+### Test price update event for specific market
+POST http://localhost:8000/events/price-updated/KRW-BTC
 
-GET http://127.0.0.1:8000/
-Accept: application/json
+### Test price update event for another market  
+POST http://localhost:8000/events/price-updated/KRW-ETH
 
-###
+### Test with invalid market
+POST http://localhost:8000/events/price-updated/INVALID-MARKET
 
-GET http://127.0.0.1:8000/hello/User
-Accept: application/json
+### FastAPI 자동 문서화 확인
+GET http://localhost:8000/docs
 
-###
+### OpenAPI JSON 스키마 확인
+GET http://localhost:8000/openapi.json
