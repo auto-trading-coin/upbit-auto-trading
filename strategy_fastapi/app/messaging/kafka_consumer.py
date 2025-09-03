@@ -4,13 +4,13 @@ app/services/kafka_consumer.py
 """
 import json
 import logging
-from typing import Dict, Any, List
+from typing import Dict, Any
 from confluent_kafka import Consumer
 from pydantic import ValidationError
 
 from .consumer_port import ConsumerPort
-from .orchestrator import Orchestrator  
-from .signal_service import SignalService
+from ..services.orchestrator import Orchestrator
+from ..services.signal_service import SignalService
 from ..schemas.models import PriceUpdateEvent
 
 logger = logging.getLogger(__name__)

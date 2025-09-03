@@ -1,5 +1,5 @@
 """
-app/publishers/port.py
+app/publishers/publisher_port.py
 - 시그널 발행용 포트 인터페이스 정의
 - 발행 구현체는 이 인터페이스 구현
 """

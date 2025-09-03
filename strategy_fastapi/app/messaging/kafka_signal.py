@@ -1,10 +1,10 @@
 """
-app/publishers/kafka_signal.py
+app/messaging/kafka_signal.py
 - Kafka 기반 SignalPublisher 구현체
 - Signal 객체를 JSON으로 직렬화 후 Kafka 토픽에 발행
 """
 
-from app.publishers.port import SignalPublisherPort
+from app.messaging.publisher_port import SignalPublisherPort
 from app.schemas.models import Signal
 from confluent_kafka import Producer
 

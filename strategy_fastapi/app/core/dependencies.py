@@ -12,12 +12,12 @@ from redis import Redis
 
 from app.core.settings import settings
 from app.repositories.redis_chart import ChartRedisRepository
-from app.publishers.kafka_signal import KafkaSignalPublisher
+from app.messaging.kafka_signal import KafkaSignalPublisher
 from app.models.registry import get_registered_strategies
 from app.services.orchestrator import Orchestrator
 from app.services.signal_service import SignalService
-from app.services.kafka_consumer import KafkaConsumerService
-from app.publishers.port import SignalPublisherPort
+from app.messaging.kafka_consumer import KafkaConsumerService
+from app.messaging.publisher_port import SignalPublisherPort
 from app.models.strategy_base import Strategy
 
 # =============================================================================

@@ -6,7 +6,7 @@ app/services/signal_service.py
 
 from typing import List
 from app.schemas.models import StrategyResult, Signal
-from app.publishers.port import SignalPublisherPort
+from app.messaging.publisher_port import SignalPublisherPort
 
 class SignalService:
     def __init__(self, publisher: SignalPublisherPort):
