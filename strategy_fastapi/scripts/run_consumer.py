@@ -1,8 +1,9 @@
 """
 scripts/run_consumer.py
-- Kafka 컨슈머를 실행하는 스크립트
+- Kafka 컨슈머를 비동기 방식으로 실행하는 스크립트
 """
 import logging
+import asyncio
 from app.core.dependencies import get_kafka_consumer_service
 
 # 로깅 설정
@@ -13,16 +14,16 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def main():
-    """Kafka 컨슈머를 시작합니다."""
+async def main():
+    """Kafka 컨슈머를 시작합니다 (비동기 방식)."""
     try:
-        logger.info("Starting Kafka consumer service...")
+        logger.info("Starting Kafka consumer service (async)...")
         
         # 의존성 주입으로 컨슈머 서비스 생성
         consumer_service = get_kafka_consumer_service()
         
-        # 컨슈밍 시작 (블로킹 작업)
-        consumer_service.start_consuming()
+        # 비동기 컨슈밍 시작
+        await consumer_service.start_consuming()
         
     except KeyboardInterrupt:
         logger.info("Consumer service interrupted by user")
@@ -32,4 +33,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())

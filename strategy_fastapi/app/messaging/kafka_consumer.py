@@ -1,9 +1,10 @@
 """
-app/services/kafka_consumer.py  
+app/services/kafka_consumer.py
 - Kafka 기반 Price Update 컨슈머 구현체
 """
 import json
 import logging
+import asyncio
 from typing import Dict, Any
 from confluent_kafka import Consumer
 from pydantic import ValidationError
@@ -18,14 +19,14 @@ logger = logging.getLogger(__name__)
 
 class KafkaConsumerService(ConsumerPort):
     """Kafka price.update 토픽 컨슈머"""
-    
+
     def __init__(
         self,
         orchestrator: Orchestrator,
         signal_service: SignalService,
         bootstrap_servers: str = "localhost:9092",
-        topic: str = "price.update", 
-        group_id: str = "strategy-service"
+        topic: str = "price.update",
+        group_id: str = "autric_group"  # 새로운 그룹 ID로 테스트
     ):
         self.orchestrator = orchestrator
         self.signal_service = signal_service
@@ -35,67 +36,90 @@ class KafkaConsumerService(ConsumerPort):
         self.consumer = None
         self._running = False
 
-    def start_consuming(self) -> None:
-        """컨슈밍 시작"""
+    async def start_consuming(self) -> None:
+        """비동기 컨슈밍 시작"""
         try:
             config = {
                 'bootstrap.servers': self.bootstrap_servers,
-                'group.id': self.group_id,
-                'auto.offset.reset': 'latest',
+                'group.id': 'autric_group',  # 간단한 고정 그룹 ID
+                'auto.offset.reset': 'earliest',
                 'enable.auto.commit': True
             }
-            
-            self.consumer = Consumer(config)
+
+            self.consumer = Consumer({'bootstrap.servers': 'localhost:9092', 'group.id': 'autric_group'})
             self.consumer.subscribe([self.topic])
-            
+
             self._running = True
-            logger.info(f"Started consuming from topic: {self.topic}")
-            
+            logger.info(f"Started async consuming from topic: {self.topic}")
+            logger.info(f"Consumer config: {config}")
+            logger.info(f"Subscribed to topic: {self.topic}")
+
+            # 현재 이벤트 루프 가져오기
+            current_loop = asyncio.get_running_loop()
+
             while self._running:
                 try:
-                    msg = self.consumer.poll(timeout=1.0)
+                    # 블로킹 poll을 executor에서 실행
+                    msg = await current_loop.run_in_executor(
+                        None, self.consumer.poll, 1.0
+                    )
+
                     if msg is None:
+                        # 주기적으로 폴링 상태 로깅
+                        if not hasattr(self, '_poll_count'):
+                            self._poll_count = 0
+                        self._poll_count += 1
+                        if self._poll_count % 30 == 0:  # 30초마다 한 번씩
+                            logger.info(f"Polling... (poll count: {self._poll_count})")
                         continue
-                        
+
                     if msg.error():
                         logger.error(f"Consumer error: {msg.error()}")
                         continue
-                        
-                    # 메시지 처리
+
+                    # 메시지 처리 (비동기)
                     message_data = json.loads(msg.value().decode('utf-8'))
-                    self._handle_message(message_data)
-                    
+                    logger.info(f"Received message: key={msg.key()}, partition={msg.partition()}, offset={msg.offset()}")
+                    await self._handle_message(message_data)
+
                 except Exception as e:
                     logger.error(f"Error processing message: {e}")
-                    
-        except KeyboardInterrupt:
-            logger.info("Consumer interrupted by user")
+
         except Exception as e:
             logger.error(f"Consumer error: {e}")
         finally:
-            self.stop_consuming()
+            await self.stop_consuming()
 
-    def stop_consuming(self) -> None:
-        """컨슈밍 중지"""
+    async def stop_consuming(self) -> None:
+        """비동기 컨슈밍 중지"""
         self._running = False
         if self.consumer:
-            self.consumer.close()
-            logger.info(f"Stopped consuming from topic: {self.topic}")
+            # executor에서 close 실행 (블로킹일 수 있음)
+            current_loop = asyncio.get_running_loop()
+            await current_loop.run_in_executor(None, self.consumer.close)
+            logger.info(f"Stopped async consuming from topic: {self.topic}")
 
-    def _handle_message(self, message_data: Dict[str, Any]) -> None:
+    async def _handle_message(self, message_data: Dict[str, Any]) -> None:
         """price.update 토픽 메시지 처리"""
         try:
             event = PriceUpdateEvent(**message_data)
             logger.info(f"Processing price update for market: {event.market} (eventId: {event.eventId})")
-            
-            # 전략 실행
-            results = self.orchestrator.run_for_market(event.market)
-            
-            # 신호 발행  
-            emitted = self.signal_service.publish_from_results(results)
-            
+
+            # executor에서 동기 작업들을 실행
+            current_loop = asyncio.get_running_loop()
+
+            # 전략 실행 (비동기)
+            results = await current_loop.run_in_executor(
+                None, self.orchestrator.run_for_market, event.market
+            )
+
+            # 신호 발행 (비동기)
+            emitted = await current_loop.run_in_executor(
+                None, self.signal_service.publish_from_results, results
+            )
+
             logger.info(f"Market {event.market}: {len(emitted)} signals emitted")
-            
+
         except ValidationError as e:
             logger.error(f"Invalid message format: {e}")
             logger.error(f"Message: {message_data}")

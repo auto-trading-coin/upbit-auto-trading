@@ -12,12 +12,12 @@ from redis import Redis
 
 from app.core.settings import settings
 from app.repositories.redis_chart import ChartRedisRepository
-from app.messaging.kafka_signal import KafkaSignalPublisher
+from app.messaging.kafka_signal import KafkaSignalProducer
 from app.models.registry import get_registered_strategies
 from app.services.orchestrator import Orchestrator
 from app.services.signal_service import SignalService
 from app.messaging.kafka_consumer import KafkaConsumerService
-from app.messaging.publisher_port import SignalPublisherPort
+from app.messaging.producer_port import SignalProducerPort
 from app.models.strategy_base import Strategy
 
 # =============================================================================
@@ -76,11 +76,11 @@ def get_chart_repository(
 # Publisher Layer Dependencies (Infrastructure 의존)
 # =============================================================================
 
-def get_signal_publisher(
+def get_signal_producer(
     producer: Producer = Depends(get_kafka_producer)
-) -> SignalPublisherPort:
-    """시그널 발행자"""
-    return KafkaSignalPublisher(
+) -> SignalProducerPort:
+    """시그널 생산자"""
+    return KafkaSignalProducer(
         producer=producer, 
         topic=settings.kafka_signal_topic
     )
@@ -105,10 +105,10 @@ def get_orchestrator(
     return Orchestrator(repository=repository, strategies=strategies)
 
 def get_signal_service(
-    publisher: SignalPublisherPort = Depends(get_signal_publisher),
+    producer: SignalProducerPort = Depends(get_signal_producer),
 ) -> SignalService:
     """시그널 발행 서비스"""
-    return SignalService(publisher=publisher)
+    return SignalService(producer=producer)
 
 def get_kafka_consumer_service(
     orchestrator: Orchestrator = Depends(get_orchestrator),

@@ -1,14 +1,14 @@
 """
 app/messaging/kafka_signal.py
-- Kafka 기반 SignalPublisher 구현체
+- Kafka 기반 SignalProducer 구현체
 - Signal 객체를 JSON으로 직렬화 후 Kafka 토픽에 발행
 """
 
-from app.messaging.publisher_port import SignalPublisherPort
+from app.messaging.producer_port import SignalProducerPort
 from app.schemas.models import Signal
 from confluent_kafka import Producer
 
-class KafkaSignalPublisher(SignalPublisherPort):
+class KafkaSignalProducer(SignalProducerPort):
     def __init__(self, producer: Producer, topic: str):
         self.producer = producer
         self.topic = topic

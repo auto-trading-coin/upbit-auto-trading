@@ -6,11 +6,11 @@ app/services/signal_service.py
 
 from typing import List
 from app.schemas.models import StrategyResult, Signal
-from app.messaging.publisher_port import SignalPublisherPort
+from app.messaging.producer_port import SignalProducerPort
 
 class SignalService:
-    def __init__(self, publisher: SignalPublisherPort):
-        self.publisher = publisher
+    def __init__(self, producer: SignalProducerPort):
+        self.producer = producer
 
     def publish_from_results(self, results: List[StrategyResult]) -> List[Signal]:
         emitted: List[Signal] = []
@@ -18,7 +18,7 @@ class SignalService:
         for result in results:
             if result.decision.is_entry_or_exit():
                 signal = result.to_signal()
-                self.publisher.publish(signal)
+                self.producer.publish(signal)
                 emitted.append(signal)
 
         return emitted

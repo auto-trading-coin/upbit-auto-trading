@@ -24,7 +24,7 @@ strategy_fastapi/
 │   │   └── registry.py        # 활성화 전략 등록
 │   ├── repositories/          # Redis 데이터 접근 계층
 │   │   └── redis_chart.py
-│   ├── publishers/            # 퍼블리셔 구현 (Kafka/Dummy 등)
+│   ├── producers/            # 프로듀서 구현 (Kafka/Dummy 등)
 │   │   ├── dummy.py
 │   │   └── port.py            # SignalPublisherPort 인터페이스
 │   └── utils/                 # 보조 유틸리티 함수들

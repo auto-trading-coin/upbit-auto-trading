@@ -4,6 +4,7 @@ app/main.py
 - 라우터 포함 및 실행 설정
 """
 import logging
+import asyncio
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
 from app.core.settings import settings
@@ -18,7 +19,10 @@ logging.basicConfig(
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup: 인프라 연결 검증 (객체는 생성하지 않음)
+    # Startup: 인프라 연결 검증 및 컨슈머 시작
+    consumer_service = None
+    consumer_task = None
+    
     try:
         from redis import Redis
         from confluent_kafka import Producer
@@ -35,9 +39,29 @@ async def lifespan(app: FastAPI):
             'client.id': f"{settings.app_name}-validation"
         })
         kafka_test.flush(timeout=1.0)
+
+        # 메타데이터 요청 (timeout = 5초)
+        metadata = kafka_test.list_topics(timeout=5)
+
+        brokers = ", ".join([f"{b.host}:{b.port}" for b in metadata.brokers.values()])
         logger.info("[Startup] Kafka Producer 연결 검증 성공")
+        logger.info(f"[Startup] 연결된 Kafka 브로커: {brokers}")
+
+        # 토픽 목록도 원하면 출력
+        topics = ", ".join(metadata.topics.keys())
+        logger.info(f"[Startup] 사용 가능한 토픽: {topics}")
         
         logger.info("[Startup] 모든 인프라 연결 검증 완료")
+        
+        # Kafka 컨슈머 백그라운드 태스크 시작
+        from app.core.dependencies import get_kafka_consumer_service
+        consumer_service = get_kafka_consumer_service()
+        
+        # 백그라운드에서 비동기 컨슈머 실행
+        consumer_task = asyncio.create_task(
+            consumer_service.start_consuming()
+        )
+        logger.info("[Startup] Kafka 컨슈머 백그라운드 태스크 시작")
         
     except Exception as e:
         logger.error(f"[Startup] 인프라 연결 실패: {e}")
@@ -45,10 +69,30 @@ async def lifespan(app: FastAPI):
     
     yield
     
-    # Shutdown: 싱글톤 정리
+    # Shutdown: 컨슈머 및 싱글톤 정리
+    logger.info("[Shutdown] Kafka 컨슈머 중지 시작")
+    
+    if consumer_service:
+        # 컨슈머 중지 신호
+        consumer_service._running = False
+        logger.info("[Shutdown] 컨슈머 중지 신호 발송")
+        
+        # 컨슈머가 깔끔하게 종료될 시간 제공
+        if consumer_task and not consumer_task.done():
+            try:
+                await asyncio.wait_for(consumer_task, timeout=5.0)
+                logger.info("[Shutdown] 컨슈머 태스크 정상 종료")
+            except asyncio.TimeoutError:
+                logger.warning("[Shutdown] 컨슈머 태스크 타임아웃, 강제 취소")
+                consumer_task.cancel()
+                try:
+                    await consumer_task
+                except asyncio.CancelledError:
+                    logger.info("[Shutdown] 컨슈머 태스크 취소 완료")
+    
     logger.info("[Shutdown] 싱글톤 정리 시작")
     cleanup_singletons()
-    logger.info("[Shutdown] 싱글톤 정리 완료")
+    logger.info("[Shutdown] 모든 정리 완료")
 
 app = FastAPI(title=settings.app_name, lifespan=lifespan)
 

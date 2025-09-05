@@ -27,17 +27,14 @@ def health_check():
 
 
 @router.post("/consumer/start")
-def start_kafka_consumer():
-    """Kafka 컨슈머 시작 (테스트용)"""
-    import threading
+async def start_kafka_consumer_async():
+    """Kafka 컨슈머 시작 (테스트용 - 비동기 방식)"""
+    import asyncio
     from app.core.dependencies import get_kafka_consumer_service
     
-    def run_consumer():
-        consumer_service = get_kafka_consumer_service()
-        consumer_service.start_consuming()
+    consumer_service = get_kafka_consumer_service()
     
-    # 별도 스레드에서 컨슈머 실행
-    thread = threading.Thread(target=run_consumer, daemon=True)
-    thread.start()
+    # 백그라운드 태스크로 비동기 컨슈머 실행
+    asyncio.create_task(consumer_service.start_consuming())
     
-    return {"status": "Kafka consumer started in background"}
+    return {"status": "Async Kafka consumer started in background"}
