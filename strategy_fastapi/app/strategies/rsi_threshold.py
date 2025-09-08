@@ -36,7 +36,7 @@ class RSIThreshold(Strategy):
         return 100.0 - (100.0 / (1.0 + rs))
 
     def evaluate(self, market: str, unit: int, data: List[Candle]) -> StrategyResult:
-        closes = [c.close for c in data]
+        closes = [c.trade_price for c in data]
         r = self._rsi(closes)
         decision = Decision.HOLD
         if r <= self.oversold:

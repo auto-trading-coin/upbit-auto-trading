@@ -5,8 +5,9 @@ app/services/kafka_consumer.py
 import json
 import logging
 import asyncio
+import sys
 from typing import Dict, Any
-from confluent_kafka import Consumer
+from confluent_kafka import Consumer,KafkaError,KafkaException
 from pydantic import ValidationError
 
 from .consumer_port import ConsumerPort
@@ -24,9 +25,9 @@ class KafkaConsumerService(ConsumerPort):
         self,
         orchestrator: Orchestrator,
         signal_service: SignalService,
-        bootstrap_servers: str = "localhost:9092",
-        topic: str = "price.update",
-        group_id: str = "autric_group"  # 새로운 그룹 ID로 테스트
+        bootstrap_servers: str,
+        topic: str,
+        group_id: str  # 새로운 그룹 ID로 테스트
     ):
         self.orchestrator = orchestrator
         self.signal_service = signal_service
@@ -41,12 +42,12 @@ class KafkaConsumerService(ConsumerPort):
         try:
             config = {
                 'bootstrap.servers': self.bootstrap_servers,
-                'group.id': 'autric_group',  # 간단한 고정 그룹 ID
+                'group.id': self.group_id,  # 간단한 고정 그룹 ID
                 'auto.offset.reset': 'earliest',
                 'enable.auto.commit': True
             }
 
-            self.consumer = Consumer({'bootstrap.servers': 'localhost:9092', 'group.id': 'autric_group'})
+            self.consumer = Consumer(config)
             self.consumer.subscribe([self.topic])
 
             self._running = True
@@ -54,36 +55,54 @@ class KafkaConsumerService(ConsumerPort):
             logger.info(f"Consumer config: {config}")
             logger.info(f"Subscribed to topic: {self.topic}")
 
-            # 현재 이벤트 루프 가져오기
-            current_loop = asyncio.get_running_loop()
+            # # 현재 이벤트 루프 가져오기
+            # current_loop = asyncio.get_running_loop()
+            #
+            # while self._running:
+            #     try:
+            #         # 블로킹 poll을 executor에서 실행
+            #         msg = await current_loop.run_in_executor(
+            #             None, self.consumer.poll, 1.0
+            #         )
+            #
+            #         if msg is None:
+            #             # 주기적으로 폴링 상태 로깅
+            #             if not hasattr(self, '_poll_count'):
+            #                 self._poll_count = 0
+            #             self._poll_count += 1
+            #             if self._poll_count % 30 == 0:  # 30초마다 한 번씩
+            #                 logger.info(f"Polling... (poll count: {self._poll_count})")
+            #             continue
+            #
+            #         if msg.error():
+            #             logger.error(f"Consumer error: {msg.error()}")
+            #             continue
+            #
+            #         # 메시지 처리 (비동기)
+            #         message_data = json.loads(msg.value().decode('utf-8'))
+            #         logger.info(f"Received message: key={msg.key()}, partition={msg.partition()}, offset={msg.offset()}")
+            #         await self._handle_message(message_data)
+            #
+            #     except Exception as e:
+            #         logger.error(f"Error processing message: {e}")
 
             while self._running:
-                try:
-                    # 블로킹 poll을 executor에서 실행
-                    msg = await current_loop.run_in_executor(
-                        None, self.consumer.poll, 1.0
-                    )
+                # logger.info("consumer start")
+                msg = self.consumer.poll(timeout=1.0)
+                if msg is None:
+                    continue
 
-                    if msg is None:
-                        # 주기적으로 폴링 상태 로깅
-                        if not hasattr(self, '_poll_count'):
-                            self._poll_count = 0
-                        self._poll_count += 1
-                        if self._poll_count % 30 == 0:  # 30초마다 한 번씩
-                            logger.info(f"Polling... (poll count: {self._poll_count})")
-                        continue
-
-                    if msg.error():
-                        logger.error(f"Consumer error: {msg.error()}")
-                        continue
-
-                    # 메시지 처리 (비동기)
-                    message_data = json.loads(msg.value().decode('utf-8'))
+                if msg.error():
+                    if msg.error().code() == KafkaError._PARTITION_EOF:
+                        # End of partition event
+                        sys.stderr.write('%% %s [%d] reached end at offset %d\n' %
+                                         (msg.topic(), msg.partition(), msg.offset()))
+                    elif msg.error():
+                        raise KafkaException(msg.error())
+                else:
                     logger.info(f"Received message: key={msg.key()}, partition={msg.partition()}, offset={msg.offset()}")
+                    message_data = json.loads(msg.value().decode('utf-8'))
                     await self._handle_message(message_data)
-
-                except Exception as e:
-                    logger.error(f"Error processing message: {e}")
 
         except Exception as e:
             logger.error(f"Consumer error: {e}")

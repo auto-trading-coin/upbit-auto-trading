@@ -119,8 +119,37 @@ def get_kafka_consumer_service(
         orchestrator=orchestrator,
         signal_service=signal_service,
         bootstrap_servers=settings.kafka_bootstrap_servers,
-        topic="price.update",
-        group_id="strategy-service"
+        topic=settings.kafka_consumer_topic,
+        group_id=settings.kafka_consumer_group_id
+    )
+
+# =============================================================================
+# Lifespan Dependencies (Depends() 없이 직접 구성)
+# =============================================================================
+
+def create_kafka_consumer_service_for_lifespan() -> KafkaConsumerService:
+    """lifespan용 Kafka 컨슈머 서비스 (Depends() 없이 직접 구성)"""
+    redis_client = get_redis_client()
+    chart_repo = ChartRedisRepository(
+        redis_client=redis_client,
+        scan_count=settings.redis_scan_count
+    )
+    strategies = get_registered_strategies()
+    orchestrator = Orchestrator(repository=chart_repo, strategies=strategies)
+    
+    kafka_producer = get_kafka_producer()
+    signal_producer = KafkaSignalProducer(
+        producer=kafka_producer,
+        topic=settings.kafka_signal_topic
+    )
+    signal_service = SignalService(producer=signal_producer)
+    
+    return KafkaConsumerService(
+        orchestrator=orchestrator,
+        signal_service=signal_service,
+        bootstrap_servers=settings.kafka_bootstrap_servers,
+        topic=settings.kafka_consumer_topic,
+        group_id=settings.kafka_consumer_group_id
     )
 
 # =============================================================================

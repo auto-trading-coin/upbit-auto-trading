@@ -8,7 +8,7 @@ import asyncio
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
 from app.core.settings import settings
-from app.core.dependencies import get_redis_client, cleanup_singletons
+from app.core.dependencies import get_redis_client, cleanup_singletons, create_kafka_consumer_service_for_lifespan
 from app.api.routes import router as main_router
 
 logger = logging.getLogger(__name__)
@@ -28,7 +28,7 @@ async def lifespan(app: FastAPI):
         from confluent_kafka import Producer
         
         # Redis 연결 검증
-        redis_test = Redis.from_url(settings.redis_url)
+        redis_test = get_redis_client()
         redis_test.ping()
         redis_test.close()
         logger.info("[Startup] Redis 연결 검증 성공")
@@ -54,8 +54,8 @@ async def lifespan(app: FastAPI):
         logger.info("[Startup] 모든 인프라 연결 검증 완료")
         
         # Kafka 컨슈머 백그라운드 태스크 시작
-        from app.core.dependencies import get_kafka_consumer_service
-        consumer_service = get_kafka_consumer_service()
+        # lifespan에서는 Depends()가 작동하지 않으므로 별도 함수 사용
+        consumer_service = create_kafka_consumer_service_for_lifespan()
         
         # 백그라운드에서 비동기 컨슈머 실행
         consumer_task = asyncio.create_task(

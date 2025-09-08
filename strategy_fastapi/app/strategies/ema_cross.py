@@ -25,7 +25,7 @@ class EMACross(Strategy):
         return ema
 
     def evaluate(self, market: str, unit: int, data: List[Candle]) -> StrategyResult:
-        closes = [c.close for c in data]
+        closes = [c.trade_price for c in data]
         f = self._ema(closes, self.fast)
         s = self._ema(closes, self.slow)
         decision = Decision.HOLD

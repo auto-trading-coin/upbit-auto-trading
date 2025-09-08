@@ -13,6 +13,8 @@ class Settings(BaseSettings):
     # Kafka 설정
     kafka_bootstrap_servers: str = "localhost:9092"
     kafka_signal_topic: str = "signal.out"
+    kafka_consumer_topic: str = "price.update"
+    kafka_consumer_group_id: str = "fastapi-strategy-consumer1"
     
     # 로깅 설정
     log_level: str = "INFO"
