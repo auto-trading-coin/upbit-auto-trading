@@ -17,7 +17,7 @@ class Settings(BaseSettings):
     kafka_consumer_group_id: str = "fastapi-strategy-consumer1"
     
     # 로깅 설정
-    log_level: str = "INFO"
+    log_level: str = "DEBUG"
     
     # 애플리케이션 설정
     app_name: str = "Strategy FastAPI"

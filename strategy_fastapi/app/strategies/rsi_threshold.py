@@ -66,7 +66,7 @@ class RSIThreshold(Strategy):
             dec = Decision.HOLD
         return StrategyResult(
             strategy_id=self.strategy_id,
-            strategy_name=self.name, 
+            strategy_name=self.name,
             market=market,
             unit=units_sorted[0],
             decision=dec

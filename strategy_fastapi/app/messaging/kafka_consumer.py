@@ -55,37 +55,6 @@ class KafkaConsumerService(ConsumerPort):
             logger.info(f"Consumer config: {config}")
             logger.info(f"Subscribed to topic: {self.topic}")
 
-            # # 현재 이벤트 루프 가져오기
-            # current_loop = asyncio.get_running_loop()
-            #
-            # while self._running:
-            #     try:
-            #         # 블로킹 poll을 executor에서 실행
-            #         msg = await current_loop.run_in_executor(
-            #             None, self.consumer.poll, 1.0
-            #         )
-            #
-            #         if msg is None:
-            #             # 주기적으로 폴링 상태 로깅
-            #             if not hasattr(self, '_poll_count'):
-            #                 self._poll_count = 0
-            #             self._poll_count += 1
-            #             if self._poll_count % 30 == 0:  # 30초마다 한 번씩
-            #                 logger.info(f"Polling... (poll count: {self._poll_count})")
-            #             continue
-            #
-            #         if msg.error():
-            #             logger.error(f"Consumer error: {msg.error()}")
-            #             continue
-            #
-            #         # 메시지 처리 (비동기)
-            #         message_data = json.loads(msg.value().decode('utf-8'))
-            #         logger.info(f"Received message: key={msg.key()}, partition={msg.partition()}, offset={msg.offset()}")
-            #         await self._handle_message(message_data)
-            #
-            #     except Exception as e:
-            #         logger.error(f"Error processing message: {e}")
-
             while self._running:
                 # logger.info("consumer start")
                 msg = self.consumer.poll(timeout=1.0)
