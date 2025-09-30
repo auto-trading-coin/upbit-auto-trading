@@ -3,8 +3,10 @@ package com.autric.upbit.domain.member.controller;
 import com.autric.upbit.domain.member.dto.request.MemberTradeActiveRequest;
 import com.autric.upbit.domain.member.dto.response.MemberTradeActiveResponse;
 import com.autric.upbit.domain.member.service.MemberService;
+import com.autric.upbit.external.kafka.dto.SignalMessage;
 import com.autric.upbit.external.upbit.dto.request.UpbitAuthRequest;
 import com.autric.upbit.external.upbit.service.UpbitAuthService;
+import com.autric.upbit.external.upbit.service.UpbitSignalExecutionService;
 import com.autric.upbit.global.response.code.SuccessCode;
 import com.autric.upbit.global.response.structure.SuccessResponse;
 import com.autric.upbit.global.security.oauth2.CustomOAuth2User;
@@ -13,6 +15,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.Instant;
+
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/member")
@@ -20,7 +24,7 @@ public class MemberController {
 
     private final MemberService memberService;
     private final UpbitAuthService upbitAuthService;
-
+    private final UpbitSignalExecutionService upbitSignalExecutionService;
     /**
      * 현재 로그인한 사용자의 정보를 조회하는 API
      * - JWT 인증 필터를 통해 인증된 사용자 정보를 기반으로 회원 정보를 응답
@@ -71,10 +75,16 @@ public class MemberController {
      *
      * 응답: 업비트 API KEY 삭제 여부
      */
-    @DeleteMapping("/upbit-api-key")
+    @DeleteMapping
     public ResponseEntity<?> upbitApiKeyDelete(@AuthenticationPrincipal CustomOAuth2User user){
         memberService.deleteUpbitApiKey(user);
         return SuccessResponse.createSuccess(SuccessCode.DELETE_UPBIT_API_KEY_SUCCESS);
     }
 
+    @GetMapping("/test")
+    public ResponseEntity<?> orderTest(@AuthenticationPrincipal CustomOAuth2User user){
+        SignalMessage msg = new SignalMessage("KRW-BTC",  1L, "bid", Instant.now());
+        upbitSignalExecutionService.signalExecution(msg);
+        return SuccessResponse.createSuccess(SuccessCode.LOGIN_SUCCESS);
+    }
 }
