@@ -69,7 +69,6 @@ class KafkaConsumerService(ConsumerPort):
                     elif msg.error():
                         raise KafkaException(msg.error())
                 else:
-                    logger.info(f"Received message: key={msg.key()}, partition={msg.partition()}, offset={msg.offset()}")
                     message_data = json.loads(msg.value().decode('utf-8'))
                     await self._handle_message(message_data)
 
@@ -85,13 +84,11 @@ class KafkaConsumerService(ConsumerPort):
             # executor에서 close 실행 (블로킹일 수 있음)
             current_loop = asyncio.get_running_loop()
             await current_loop.run_in_executor(None, self.consumer.close)
-            logger.info(f"Stopped async consuming from topic: {self.topic}")
 
     async def _handle_message(self, message_data: Dict[str, Any]) -> None:
         """price.update 토픽 메시지 처리"""
         try:
             event = PriceUpdateEvent(**message_data)
-            logger.info(f"Processing price update for market: {event.market} (eventId: {event.eventId})")
 
             # executor에서 동기 작업들을 실행
             current_loop = asyncio.get_running_loop()

@@ -67,17 +67,14 @@ class ThreeSoldiersTrend(Strategy):
             # 처음 처리하는 마켓이거나, 새로운 캔들인 경우
             if market not in self._last_processed_candle_time:
                 self._last_processed_candle_time[market] = candle_time
-                logger.info(f"[{market}] 첫 번째 캔들 처리: {candle_time}")
                 return True
             
             # 이전보다 새로운 캔들인 경우
             if candle_time > self._last_processed_candle_time[market]:
-                logger.info(f"[{market}] 새로운 캔들 감지: {self._last_processed_candle_time[market]} -> {candle_time}")
                 self._last_processed_candle_time[market] = candle_time
                 return True
             
             # 이미 처리한 캔들인 경우
-            logger.info(f"[{market}] 이미 처리된 캔들: {candle_time}")
             return False
             
         except Exception as e:
