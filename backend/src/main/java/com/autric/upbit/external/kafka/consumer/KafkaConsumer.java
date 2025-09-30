@@ -23,7 +23,8 @@ public class KafkaConsumer {
             return;
         }
         log.info("[Kafka] 시그널 메세지 소비");
-        log.info("전략 ID :" + msg.getStrategy() + ", 타겟 코인 :" + msg.getMarket() + ", 거래 유형: " + msg.getSide());
+        log.info("전략 ID:{}, 타겟 코인:{}, 거래 유형:{}",
+                msg.getStrategy(), msg.getMarket(), msg.getSide().equals("bid") ? "매수" : "매도");
         upbitSignalExecutionService.signalExecution(msg);
     }
 }

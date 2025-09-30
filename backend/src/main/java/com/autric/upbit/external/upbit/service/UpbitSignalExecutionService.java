@@ -6,6 +6,7 @@ import com.autric.upbit.external.kafka.dto.SignalMessage;
 import com.autric.upbit.external.upbit.client.UpbitApiClient;
 import com.autric.upbit.external.upbit.dto.response.UpbitAccountResponse;
 import com.autric.upbit.external.upbit.dto.response.UpbitOrderResponse;
+import com.autric.upbit.external.upbit.dto.response.UpbitTradePriceResponse;
 import com.autric.upbit.external.upbit.util.UpbitUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -41,12 +42,16 @@ public class UpbitSignalExecutionService {
             String price = getPrice(accounts);
             String volume = getVolume(accounts, msg.getMarket());
 
+            // 주문 자산이 부족(5천원 미만)하거나, 매도 수량이 부족할 경우 continue
+            if((msg.getSide().equals("bid") && price == null) ||
+                    (msg.getSide().equals("ask") && volume == null)) continue;
+
             try {
                 UpbitOrderResponse res = upbitApiClient.upbitOrder(
                         m.getAccessKey(), m.getSecretKey(), msg.getMarket(),
                         msg.getSide(), price, volume);
-                log.info("Member {} market buy OK: uuid={}, executed_volume={}, market={}, price={}",
-                        m.getId(), res.getUuid(), res.getExecutedVolume(), res.getMarket(), res.getPrice());
+                log.info("Member {} trade success: market={}, executed_volume={}, price={}, uuid={}",
+                        m.getId(), res.getMarket(), res.getExecutedVolume(), res.getPrice(), res.getUuid());
                 // TODO: 주문 결과 저장/알림
             }
             catch (Exception e){
@@ -70,13 +75,20 @@ public class UpbitSignalExecutionService {
                 BigDecimal available = balance.subtract(locked);
                 if (available.compareTo(BigDecimal.ZERO) <= 0) return null;
 
-                // 수수료 제외 (0.05%)
-                BigDecimal volume = available.multiply(new BigDecimal("0.9995"));
+                // 현재 코인의 시세 조회
+                UpbitTradePriceResponse res = upbitApiClient.getCurrentPrice(market);
+                BigDecimal curPrice = res.getTradePrice();
+
+                // 현재 보유한 코인의 수량 * 시세 (5천원 이상이어야 함)
+                BigDecimal price = available.multiply(curPrice);
+
+                // 매도 주문이 가능한 수량의 가치가 5천원 미만이라면 null 리턴
+                if(price.compareTo(new BigDecimal("5000")) <= 0) return null;
 
                 // 소수점 자리수는 업비트의 코인별 최소 주문 단위에 맞춰야 함
-                volume = volume.setScale(8, RoundingMode.DOWN);
+//                volume = volume.setScale(8, RoundingMode.DOWN);
 
-                return volume.toPlainString();
+                return available.toPlainString();
             }
         }
         return null;

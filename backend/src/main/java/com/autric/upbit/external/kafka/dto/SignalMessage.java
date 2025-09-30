@@ -19,6 +19,6 @@ public class SignalMessage {
     /** 시장가 매수/매도 옵션 (bid : 매수 / ask : 매도)*/
     private String side;
 
-    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSSX", timezone = "UTC")
+    @JsonFormat(shape = JsonFormat.Shape.STRING)
     private Instant timestamp;
 }

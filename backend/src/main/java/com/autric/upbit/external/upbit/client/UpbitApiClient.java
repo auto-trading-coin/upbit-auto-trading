@@ -4,6 +4,7 @@ import com.autric.upbit.domain.chart.entity.Market;
 import com.autric.upbit.external.upbit.dto.response.UpbitAccountResponse;
 import com.autric.upbit.external.upbit.dto.response.UpbitCandleResponse;
 import com.autric.upbit.external.upbit.dto.response.UpbitOrderResponse;
+import com.autric.upbit.external.upbit.dto.response.UpbitTradePriceResponse;
 import com.autric.upbit.external.upbit.util.UpbitUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -11,7 +12,7 @@ import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
-
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
@@ -178,5 +179,15 @@ public class UpbitApiClient {
             log.error("Upbit order FAILED (non-HTTP): {}", e.getMessage(), e);
             throw e;
         }
+    }
+
+    public UpbitTradePriceResponse getCurrentPrice(String marketCode) {
+        return upbitWebClient.get()
+                .uri(u -> u.path("/v1/ticker").queryParam("markets", marketCode).build())
+                .retrieve()
+                .bodyToFlux(UpbitTradePriceResponse.class)
+                .next()
+                .timeout(Duration.ofSeconds(5))
+                .block(); // 블로킹
     }
 }
