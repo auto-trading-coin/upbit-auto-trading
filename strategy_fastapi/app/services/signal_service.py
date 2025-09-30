@@ -17,10 +17,9 @@ class SignalService:
         emitted: List[Signal] = []
 
         for result in results:
-            if result.decision.is_entry_or_exit():
-                signal = result.to_signal()
-                if signal is not None:  # HOLD가 아닌 경우에만 발행
-                    self.producer.publish(signal)
-                    emitted.append(signal)
+            signal = result.to_signal()
+            if signal is not None:  # HOLD가 아닌 경우에만 발행
+                self.producer.publish(signal)
+                emitted.append(signal)
 
         return emitted

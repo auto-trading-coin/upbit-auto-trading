@@ -17,9 +17,6 @@ class Decision(str, Enum):
     ASK = "ASK"
     HOLD = "HOLD"
 
-    def is_entry_or_exit(self) -> bool:
-        return self in {Decision.BID, Decision.ASK}
-    
     def to_side(self) -> Optional[str]:
         """Java SignalMessage의 side 필드로 변환"""
         if self == Decision.BID:
@@ -52,9 +49,6 @@ class StrategyResult(BaseModel):
 
     def to_signal(self) -> Optional["Signal"]:
         """메인서버 SignalMessage 형식으로 변환 (KST 시간대 사용)"""
-        if self.decision == Decision.HOLD:
-            return None  # HOLD는 신호를 보내지 않음
-        
         return Signal(
             market=self.market,
             strategy=self.strategy_id,
