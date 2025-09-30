@@ -1,13 +1,14 @@
 package com.autric.upbit.external.kafka.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
-import lombok.Builder;
-import lombok.Getter;
+import lombok.*;
 
 import java.time.Instant;
 
 @Getter
-@Builder
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
 public class SignalMessage {
     /** 마켓 이름 (ex. KRW-BTC)*/
     private String market;
