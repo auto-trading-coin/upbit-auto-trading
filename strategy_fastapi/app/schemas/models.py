@@ -24,7 +24,7 @@ class Decision(str, Enum):
         elif self == Decision.ASK:
             return "ask"  # 또는 "매도" - 메인서버 요구사항에 따라
         else:
-            return None  # HOLD는 신호를 보내지 않음
+            return ""  # HOLD는 신호를 보내지 않음
 
 class Candle(BaseModel):
     id: Optional[int] = None
