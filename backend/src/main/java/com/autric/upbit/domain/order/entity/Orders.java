@@ -2,7 +2,7 @@ package com.autric.upbit.domain.order.entity;
 
 import com.autric.upbit.domain.chart.entity.Market;
 import com.autric.upbit.domain.member.entity.Member;
-import com.autric.upbit.domain.signal.entity.MemberSignal;
+import com.autric.upbit.domain.signal.entity.Signals;
 import com.autric.upbit.global.entity.BaseTimeEntity;
 import jakarta.persistence.*;
 import lombok.*;
@@ -45,8 +45,8 @@ public class Orders extends BaseTimeEntity {
      * 멤버시그널ID FK
      */
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "member_signal_id")
-    private MemberSignal memberSignal;
+    @JoinColumn(name = "signal_id")
+    private Signals signal;
 
     /**
      * 주문 UUID (주문 성공 시)
@@ -95,13 +95,13 @@ public class Orders extends BaseTimeEntity {
 
 
     @Builder
-    public Orders(Member member, Market market, MemberSignal memberSignal, String uuid, Side side,
+    public Orders(Member member, Market market, Signals signal, String uuid, Side side,
                   OrderType ordType, BigDecimal volume, BigDecimal price,
                   OrderStatus status, String errorMessage) {
 
         this.member = member;
         this.market = market;
-        this.memberSignal = memberSignal;
+        this.signal = signal;
         this.uuid = uuid;
         this.side = side;
         this.ordType = ordType;
