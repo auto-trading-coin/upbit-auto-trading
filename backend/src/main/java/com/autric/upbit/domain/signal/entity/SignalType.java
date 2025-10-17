@@ -20,8 +20,8 @@ import com.fasterxml.jackson.annotation.JsonValue;
  * </pre>
  */
 public enum SignalType {
-    BUY("buy"),
-    SELL("sell");
+    BUY("bid"),
+    SELL("ask");
 
     private final String value;
 

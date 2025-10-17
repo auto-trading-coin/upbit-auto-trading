@@ -134,10 +134,10 @@ class ThreeSoldiersTrend(Strategy):
             )
 
         closes = [c.trade_price for c in candles_5m]
-        ma1_current = self._sma(closes, self.ma1_length)
-        ma2_current = self._sma(closes, self.ma2_length)
-        ma1_prev = self._sma(closes[:-1], self.ma1_length)
-        ma2_prev = self._sma(closes[:-1], self.ma2_length)
+        ma1_current = self._sma(closes, self.ma1_length) # 현재 30개 캔들의 이평선 값
+        ma2_current = self._sma(closes, self.ma2_length) # 현재 200개 캔들의 이평선 값
+        ma1_prev = self._sma(closes[:-1], self.ma1_length) # 1캔들 전 30개 캔들의 이평선 값
+        ma2_prev = self._sma(closes[:-1], self.ma2_length) # 1캔들 전 200개 캔들의 이평선 값
 
         if None in (ma1_current, ma2_current, ma1_prev, ma2_prev):
             return StrategyResult(
@@ -158,20 +158,24 @@ class ThreeSoldiersTrend(Strategy):
             self._last_was_sell[market] = False
 
         # 매수/매도 신호
+        # 매수 : 직전 3개 캔들 연속상승 and 30 이평선 상승 and 200이평선 상승
         buy_signal = (three_white_soldiers and
                       not self._last_was_buy[market] and
                       ma1_current > ma1_prev and
                       ma2_current > ma2_prev and
                       self._check_cooldown(market, "buy", latest_candle.candle_date_time_kst))
 
+        # 매도 : 직전 3개 캔들 연속하락 and 30 이평선 하락 and 200이평선 하락
         sell_signal = (three_black_crows and
                        not self._last_was_sell[market] and
                        ma1_current < ma1_prev and
                        ma2_current < ma2_prev and
                        self._check_cooldown(market, "sell", latest_candle.candle_date_time_kst))
 
+        # decision 변수 초기화(HOLD)
         decision = Decision.HOLD
         latest_time = datetime.fromisoformat(latest_candle.candle_date_time_kst.replace('Z', '+00:00'))
+
 
         if buy_signal:
             decision = Decision.BID
