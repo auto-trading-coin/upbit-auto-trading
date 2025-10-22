@@ -112,6 +112,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     // 카카오 로그인 함수
     const login = () => {
         const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8080';
+        // const backendUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'autric.site:8080';
         window.location.href = `${backendUrl}/oauth2/authorization/kakao`;
     };
 
