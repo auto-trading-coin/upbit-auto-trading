@@ -1,0 +1,48 @@
+services:
+  backend-app:
+    container_name: backend
+    build:
+      context: ./upbit-auto-trading/backend
+      dockerfile: Dockerfile
+    image: backend
+    
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      TZ: Asia/Seoul
+      JWT_SECRET : ${JWT_SECRET}
+      ACCESS_EXPIRED : ${ACCESS_EXPIRED}
+      REFRESH_EXPIRED : ${REFRESH_EXPIRED}
+      DATABASE : ${DATABASE}
+      DATABASE_URL_PROD : ${DATABASE_URL_PROD}
+      MYSQL_ID_PROD : ${MYSQL_ID_PROD}
+      MYSQL_PASSWORD_PROD : ${MYSQL_PASSWORD_PROD}
+      REDIS_HOST_PROD : ${REDIS_HOST_PROD}
+      KAFKA_SERVER_IP_PROD : ${KAFKA_SERVER_IP_PROD}
+      KAFKA_GROUP_ID : ${KAFKA_GROUP_ID}
+      KAKAO_CLIENT_ID : ${KAKAO_CLIENT_ID}
+      KAKAO_CLIENT_SECRET : ${KAKAO_CLIENT_SECRET}
+
+    expose:
+      - "8080"
+    networks:
+      - app_net
+
+  frontend-app:
+    container_name: frontend
+    build:
+      context: ./upbit-auto-trading/frontend
+      dockerfile: Dockerfile
+    image: frontend
+    
+    environment:
+      NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL}
+      NEXT_PUBLIC_KAKAO_CLIENT_ID: ${KAKAO_CLIENT_ID}
+    
+    expose:
+      - "3000"
+    networks:
+      - app_net
+
+networks:
+  app_net:
+    external: true
