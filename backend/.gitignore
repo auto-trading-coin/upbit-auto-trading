@@ -38,6 +38,7 @@ out/
 
 # QueryDSL Q클래스 제외
 /src/main/generated/
+src/main/generated/
 **/generated/
 **/QEntity*.java
 **/Q*.java
