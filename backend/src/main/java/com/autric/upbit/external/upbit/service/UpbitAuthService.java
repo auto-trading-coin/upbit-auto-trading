@@ -16,7 +16,7 @@ import org.springframework.web.reactive.function.client.WebClientResponseExcepti
 public class UpbitAuthService {
 
     private final UpbitApiClient upbitApiClient;
-    private final UpbitUtil upbitUtil;
+
 
     /** 사용자의 accessKey/secretKey가 유효한 Upbit 키인지 확인
      *
@@ -25,8 +25,8 @@ public class UpbitAuthService {
 
     public void isValidUpbitKey(UpbitAuthRequest dto) {
         try {
-            String jwt = upbitUtil.createUpbitJwt(dto.getAccessKey(), dto.getSecretKey());
-            upbitApiClient.getAccount(jwt); // 요청 성공 = 키 유효
+
+            upbitApiClient.getAccount(dto.getAccessKey(), dto.getSecretKey()); // 요청 성공 = 키 유효
         } catch (WebClientResponseException e) {
             log.warn("업비트 API 키 유효성 실패 - 상태코드: {}, 응답: {}", e.getStatusCode(), e.getResponseBodyAsString());
             throw new RestApiException(ErrorCode.INVALID_UPBIT_API_KEY);
