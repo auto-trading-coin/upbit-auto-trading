@@ -1,5 +1,5 @@
 services:
-  backend-app:
+  backend:
     container_name: backend
     build:
       context: ./backend
@@ -27,7 +27,7 @@ services:
     networks:
       - app_net
 
-  frontend-app:
+  frontend:
     container_name: frontend
     build:
       context: ./frontend
