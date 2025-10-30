@@ -18,7 +18,7 @@ class SignalService:
 
         for result in results:
             signal = result.to_signal()
-            if signal is not None:  # HOLD가 아닌 경우에만 발행
+            if signal.side is not "hold":  # HOLD가 아닌 경우에만 발행
                 self.producer.publish(signal)
                 emitted.append(signal)
 

@@ -20,11 +20,11 @@ class Decision(str, Enum):
     def to_side(self) -> Optional[str]:
         """Java SignalMessage의 side 필드로 변환"""
         if self == Decision.BID:
-            return "bid"
+            return "bid" # 매수
         elif self == Decision.ASK:
-            return "ask"  # 또는 "매도" - 메인서버 요구사항에 따라
+            return "ask"  # 매도
         else:
-            return ""  # HOLD는 신호를 보내지 않음
+            return "hold"
 
 class Candle(BaseModel):
     id: Optional[int] = None
