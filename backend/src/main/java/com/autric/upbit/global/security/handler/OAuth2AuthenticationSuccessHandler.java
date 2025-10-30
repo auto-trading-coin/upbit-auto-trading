@@ -40,7 +40,6 @@ public class OAuth2AuthenticationSuccessHandler implements AuthenticationSuccess
         // 로그인한 사용자 정보 추출
         CustomOAuth2User oAuth2User = (CustomOAuth2User) authentication.getPrincipal();
         Member member = oAuth2User.getMember();
-        System.out.println(member.getEmail() + " " + member.getNickname());
         // JWT 생성
         String refreshToken = jwtProvider.createRefreshToken(member.getId());
 
