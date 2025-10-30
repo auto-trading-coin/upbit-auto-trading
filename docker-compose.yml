@@ -1,48 +1,72 @@
 services:
-  backend:
-    container_name: backend
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    image: backend
-    
-    environment:
-      SPRING_PROFILES_ACTIVE: prod
-      TZ: Asia/Seoul
-      JWT_SECRET: ${JWT_SECRET}
-      ACCESS_EXPIRED: ${ACCESS_EXPIRED}
-      REFRESH_EXPIRED: ${REFRESH_EXPIRED}
-      DATABASE: ${DATABASE}
-      DATABASE_URL_PROD: ${DATABASE_URL_PROD}
-      MYSQL_ID_PROD: ${MYSQL_ID_PROD}
-      MYSQL_PASSWORD_PROD: ${MYSQL_PASSWORD_PROD}
-      REDIS_HOST_PROD: ${REDIS_HOST_PROD}
-      KAFKA_SERVER_IP_PROD: ${KAFKA_SERVER_IP_PROD}
-      KAFKA_GROUP_ID: ${KAFKA_GROUP_ID}
-      KAKAO_CLIENT_ID: ${KAKAO_CLIENT_ID}
-      KAKAO_CLIENT_SECRET: ${KAKAO_CLIENT_SECRET}
+    backend:
+        container_name: backend
+        build:
+            context: ./backend
+            dockerfile: Dockerfile
+        image: backend
 
-    expose:
-      - "8080"
-    networks:
-      - app_net
+        environment:
+            SPRING_PROFILES_ACTIVE: prod
+            TZ: Asia/Seoul
+            JWT_SECRET: ${JWT_SECRET}
+            ACCESS_EXPIRED: ${ACCESS_EXPIRED}
+            REFRESH_EXPIRED: ${REFRESH_EXPIRED}
+            DATABASE: ${DATABASE}
+            DATABASE_URL_PROD: ${DATABASE_URL_PROD}
+            MYSQL_ID_PROD: ${MYSQL_ID_PROD}
+            MYSQL_PASSWORD_PROD: ${MYSQL_PASSWORD_PROD}
+            REDIS_HOST_PROD: ${REDIS_HOST_PROD}
+            KAFKA_SERVER_IP_PROD: ${KAFKA_SERVER_IP_PROD}
+            KAFKA_GROUP_ID: ${KAFKA_GROUP_ID}
+            KAKAO_CLIENT_ID: ${KAKAO_CLIENT_ID}
+            KAKAO_CLIENT_SECRET: ${KAKAO_CLIENT_SECRET}
 
-  frontend:
-    container_name: frontend
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    image: frontend
-    
-    environment:
-      NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL}
-      NEXT_PUBLIC_KAKAO_CLIENT_ID: ${KAKAO_CLIENT_ID}
-    
-    expose:
-      - "3000"
-    networks:
-      - app_net
+        expose:
+            - "8080"
+        networks:
+            - app_net
+
+    frontend:
+        container_name: frontend
+        build:
+            context: ./frontend
+            dockerfile: Dockerfile
+        image: frontend
+
+        environment:
+            NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL}
+            NEXT_PUBLIC_KAKAO_CLIENT_ID: ${KAKAO_CLIENT_ID}
+
+        expose:
+            - "3000"
+        networks:
+            - app_net
+
+    fastapi:
+        container_name: fastapi
+        build:
+            context: ./strategy_fastapi
+            dockerfile: Dockerfile
+        image: fastapi
+
+        environment:
+            REDIS_URL: ${REDIS_URL}
+            REDIS_SCAN_COUNT: ${REDIS_SCAN_COUNT}
+            KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS}
+            KAFKA_SIGNAL_TOPIC: ${KAFKA_SIGNAL_TOPIC}
+            KAFKA_CONSUMER_TOPIC: ${KAFKA_CONSUMER_TOPIC}
+            KAFKA_CONSUMER_GROUP_ID: ${KAFKA_CONSUMER_GROUP_ID}
+            LOG_LEVEL: ${LOG_LEVEL}
+            APP_NAME: ${APP_NAME}
+            APP_VERSION: ${APP_VERSION}
+            TZ: Asia/Seoul
+
+        expose:
+            - "8000"
+        networks:
+            - app_net
 
 networks:
-  app_net:
-    external: true
+    app_net:
+        external: true
