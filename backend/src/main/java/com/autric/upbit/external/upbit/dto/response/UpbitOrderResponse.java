@@ -30,7 +30,7 @@ public class UpbitOrderResponse {
     private String state;
 
     /** 주문 생성 시각 (KST 기준), [형식] yyyy-MM-ddTHH:mm:ss+09:00 */
-    @JsonProperty("crate_At")
+    @JsonProperty("crate_at")
     private String createdAt;
 
     /** 주문 요청 수량 */
