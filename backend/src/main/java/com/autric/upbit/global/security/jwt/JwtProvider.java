@@ -1,7 +1,7 @@
 package com.autric.upbit.global.security.jwt;
 
 import com.autric.upbit.global.response.code.ErrorCode;
-import com.autric.upbit.global.response.exception.RestApiException;
+import com.autric.upbit.global.response.exception.BusinessException;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
 import lombok.extern.slf4j.Slf4j;
@@ -88,7 +88,7 @@ public class JwtProvider {
 
             return Long.parseLong(claims.getSubject());
         } catch (JwtException | NumberFormatException e) {
-            throw new RestApiException(ErrorCode.INVALID_TOKEN);
+            throw new BusinessException(ErrorCode.INVALID_TOKEN);
         }
     }
 
@@ -121,10 +121,10 @@ public class JwtProvider {
                     .getExpiration();
 
             if (expiration.before(new Date())) {
-                throw new RestApiException(ErrorCode.EXPIRED_TOKEN); // 401 Unauthorized
+                throw new BusinessException(ErrorCode.EXPIRED_TOKEN); // 401 Unauthorized
             }
         } catch (JwtException e) {
-            throw new RestApiException(ErrorCode.INVALID_TOKEN); // 파싱 실패 시
+            throw new BusinessException(ErrorCode.INVALID_TOKEN); // 파싱 실패 시
         }
     }
 }

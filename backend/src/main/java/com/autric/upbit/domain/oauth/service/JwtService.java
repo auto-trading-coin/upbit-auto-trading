@@ -1,7 +1,7 @@
 package com.autric.upbit.domain.oauth.service;
 
 import com.autric.upbit.global.response.code.ErrorCode;
-import com.autric.upbit.global.response.exception.RestApiException;
+import com.autric.upbit.global.response.exception.BusinessException;
 import com.autric.upbit.global.security.jwt.JwtProvider;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
@@ -87,14 +87,14 @@ public class JwtService {
     public String reissueAccessToken(HttpServletRequest request) {
         String refreshToken = extractRefreshTokenFromCookie(request);
         if (refreshToken == null || !jwtProvider.validateToken(refreshToken)) {
-            throw new RestApiException(ErrorCode.INVALID_TOKEN);
+            throw new BusinessException(ErrorCode.INVALID_TOKEN);
         }
 
         Long memberId = jwtProvider.getMemberId(refreshToken);
 
         // Redis에 저장된 리프레시 토큰과 일치 여부 확인
         if (!isValid(memberId, refreshToken)) {
-            throw new RestApiException(ErrorCode.INVALID_TOKEN);
+            throw new BusinessException(ErrorCode.INVALID_TOKEN);
         }
 
         return jwtProvider.createAccessToken(memberId);

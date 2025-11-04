@@ -47,7 +47,13 @@ public enum ErrorCode implements ResponseCode {
     /*
         Strategy
      */
-    STRATEGY_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 전략입니다.");
+    STRATEGY_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 전략입니다."),
+
+
+    /*
+        Market
+     */
+    MARKET_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 전략입니다.");
 
     private final HttpStatus httpStatus;
     private final String message;

@@ -2,9 +2,8 @@ package com.autric.upbit.external.upbit.service;
 
 import com.autric.upbit.external.upbit.client.UpbitApiClient;
 import com.autric.upbit.external.upbit.dto.request.UpbitAuthRequest;
-import com.autric.upbit.external.upbit.util.UpbitUtil;
 import com.autric.upbit.global.response.code.ErrorCode;
-import com.autric.upbit.global.response.exception.RestApiException;
+import com.autric.upbit.global.response.exception.BusinessException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -29,10 +28,10 @@ public class UpbitAuthService {
             upbitApiClient.getAccount(dto.getAccessKey(), dto.getSecretKey()); // 요청 성공 = 키 유효
         } catch (WebClientResponseException e) {
             log.warn("업비트 API 키 유효성 실패 - 상태코드: {}, 응답: {}", e.getStatusCode(), e.getResponseBodyAsString());
-            throw new RestApiException(ErrorCode.INVALID_UPBIT_API_KEY);
+            throw new BusinessException(ErrorCode.INVALID_UPBIT_API_KEY);
         } catch (Exception e) {
             log.error("업비트 키 검증 중 예상치 못한 오류 발생", e);
-            throw new RestApiException(ErrorCode.INVALID_UPBIT_API_KEY);
+            throw new BusinessException(ErrorCode.INVALID_UPBIT_API_KEY);
         }
     }
 
