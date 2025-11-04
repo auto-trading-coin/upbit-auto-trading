@@ -33,7 +33,7 @@ public class SignalProcessingService {
     private final OrderService orderService;
 
     public void process(SignalMessage msg) {
-        if (strategyService.existsById(msg.getStrategy())) {
+        if (!strategyService.existsById(msg.getStrategy())) {
             log.warn("존재하지 않는 전략입니다: {}", msg.getStrategy());
             return;
         }
@@ -60,8 +60,8 @@ public class SignalProcessingService {
                 UpbitOrderResponse res = upbitApiClient.upbitOrder(
                         m.getAccessKey(), m.getSecretKey(), msg.getMarket(),
                         msg.getSide(), price, volume);
-                log.info("Member {} trade success: market={}, executed_volume={}, price={}, uuid={}",
-                        m.getId(), res.getMarket(), res.getExecutedVolume(), res.getPrice(), res.getUuid());
+                log.info("Member {} trade success: market={}, executed_volume={}, price={}, uuid={}, ordType={}",
+                        m.getId(), res.getMarket(), res.getExecutedVolume(), res.getPrice(), res.getUuid(), res.getOrdType());
 
                 // 주문 결과 저장
                 orderService.createOrder(res.toOrderEntity(market, m, signal));
