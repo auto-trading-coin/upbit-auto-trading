@@ -19,51 +19,11 @@ import java.util.List;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class UpbitSignalExecutionService {
+public class UpbitOrderCalculatorService {
 
-    private final MemberRepository memberRepository;
     private final UpbitApiClient upbitApiClient;
-    private final UpbitUtil upbitUtil;
 
-    public void signalExecution(SignalMessage msg) {
-        Long strategyId = msg.getStrategy();
-        if (strategyId == null) {
-            log.warn("존재하지 않는 전략입니다: {}", msg.getStrategy());
-            return;
-        }
-
-        // 자동매매가 활성되었고, 선택한 전략이 시그널 메세지와 일치하는 회원 조회
-        List<Member> members = memberRepository.findActiveMembersByStrategyId(strategyId);
-
-        for (Member m : members) {
-            String jwt = upbitUtil.createUpbitJwt(m.getAccessKey(), m.getSecretKey());
-            List<UpbitAccountResponse> accounts = upbitApiClient.getAccounts(jwt);
-
-            String price = getPrice(accounts);
-            String volume = getVolume(accounts, msg.getMarket());
-
-            // 주문 자산이 부족(5천원 미만)하거나, 매도 수량이 부족할 경우 continue
-            if((msg.getSide().equals("bid") && price == null) ||
-                    (msg.getSide().equals("ask") && volume == null)) continue;
-
-            try {
-                UpbitOrderResponse res = upbitApiClient.upbitOrder(
-                        m.getAccessKey(), m.getSecretKey(), msg.getMarket(),
-                        msg.getSide(), price, volume);
-                log.info("Member {} trade success: market={}, executed_volume={}, price={}, uuid={}",
-                        m.getId(), res.getMarket(), res.getExecutedVolume(), res.getPrice(), res.getUuid());
-                // TODO: 주문 결과 저장/알림
-            }
-            catch (Exception e){
-                log.error("Member {} market buy FAILED: {}", m.getId(), e.getMessage(), e);
-                throw e;
-                // TODO: 실패 저장/재시도 정책
-            }
-
-        }
-    }
-
-    private String getVolume(List<UpbitAccountResponse> accounts, String market) {
+    public String getVolume(List<UpbitAccountResponse> accounts, String market) {
         String baseCurrency = market.split("-")[1];
 
         for(UpbitAccountResponse dto : accounts){
