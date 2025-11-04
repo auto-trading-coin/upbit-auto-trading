@@ -2,7 +2,6 @@ package com.autric.upbit.external.kafka.consumer;
 
 import com.autric.upbit.domain.signal.service.SignalProcessingService;
 import com.autric.upbit.external.kafka.dto.SignalMessage;
-import com.autric.upbit.external.upbit.service.UpbitOrderCalculatorService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;

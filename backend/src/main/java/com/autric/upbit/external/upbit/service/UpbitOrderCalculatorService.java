@@ -1,13 +1,8 @@
 package com.autric.upbit.external.upbit.service;
 
-import com.autric.upbit.domain.member.entity.Member;
-import com.autric.upbit.domain.member.repository.MemberRepository;
-import com.autric.upbit.external.kafka.dto.SignalMessage;
 import com.autric.upbit.external.upbit.client.UpbitApiClient;
 import com.autric.upbit.external.upbit.dto.response.UpbitAccountResponse;
-import com.autric.upbit.external.upbit.dto.response.UpbitOrderResponse;
 import com.autric.upbit.external.upbit.dto.response.UpbitTradePriceResponse;
-import com.autric.upbit.external.upbit.util.UpbitUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
