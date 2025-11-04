@@ -15,6 +15,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+
 @Service
 @RequiredArgsConstructor
 public class MemberService {
@@ -90,5 +92,12 @@ public class MemberService {
 
 
         member.updateStrategy(strategy);
+    }
+
+    /**
+     * 활성 구독자 조회
+     */
+    public List<Member> getActiveSubscribers(Long strategyId) {
+        return memberRepository.findActiveMembersByStrategyId(strategyId);
     }
 }

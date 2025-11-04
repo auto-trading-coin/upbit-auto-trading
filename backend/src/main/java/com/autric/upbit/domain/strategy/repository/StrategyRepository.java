@@ -8,5 +8,5 @@ import java.util.Optional;
 
 @Repository
 public interface StrategyRepository extends JpaRepository<Strategy, Long> {
-    Optional<Strategy> findById(Long id);
+
 }
