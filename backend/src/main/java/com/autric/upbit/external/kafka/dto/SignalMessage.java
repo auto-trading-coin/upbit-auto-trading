@@ -1,5 +1,9 @@
 package com.autric.upbit.external.kafka.dto;
 
+import com.autric.upbit.domain.chart.entity.Market;
+import com.autric.upbit.domain.order.entity.Side;
+import com.autric.upbit.domain.signal.entity.Signals;
+import com.autric.upbit.domain.strategy.entity.Strategy;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.*;
 
@@ -21,4 +25,13 @@ public class SignalMessage {
 
     @JsonFormat(shape = JsonFormat.Shape.STRING)
     private Instant timestamp;
+
+    /** msg 를 Signal로 저장하기 위한 엔티티 변환*/
+    public Signals toSignalEntity(Market market, Strategy strategy){
+        return Signals.builder()
+                .strategy(strategy)
+                .market(market)
+                .side(Side.fromValue(this.side))
+                .build();
+    }
 }

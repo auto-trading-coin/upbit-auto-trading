@@ -53,7 +53,12 @@ public enum ErrorCode implements ResponseCode {
     /*
         Market
      */
-    MARKET_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 페어입니다.");
+    MARKET_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 페어입니다."),
+
+    /*
+        Signals
+     */
+    SIGNAL_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 시그널입니다.");
 
     private final HttpStatus httpStatus;
     private final String message;

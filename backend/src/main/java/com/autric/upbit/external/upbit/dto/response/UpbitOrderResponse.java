@@ -80,22 +80,17 @@ public class UpbitOrderResponse {
     @JsonProperty("trades_count")
     private String tradesCount;
 
-    public Orders toOrder(
-            UpbitOrderResponse res,
-            Market market,
-            Member member,
-            Signals signal
-            ) {
+    public Orders toOrderEntity(Market market, Member member, Signals signal) {
         return Orders.builder()
                 .member(member)
                 .market(market)
                 .signal(signal)
-                .uuid(res.uuid)
-                .side(Side.fromValue(res.side))
-                .ordType(OrderType.fromValue(res.ordType))
-                .volume(new BigDecimal(res.volume))
-                .price(new BigDecimal(res.price))
-                .status(OrderStatus.fromValue(res.state))
+                .uuid(this.uuid)
+                .side(Side.fromValue(this.side))
+                .ordType(OrderType.fromValue(this.ordType))
+                .volume(new BigDecimal(this.volume))
+                .price(new BigDecimal(this.price))
+                .status(OrderStatus.fromValue(this.state))
                 .build();
     }
 

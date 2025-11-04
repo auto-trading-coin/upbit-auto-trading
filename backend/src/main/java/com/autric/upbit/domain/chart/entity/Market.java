@@ -14,11 +14,12 @@ public class Market {
     @Column(name = "market_id")
     private Long id;
 
+    /** ex) KRW-BTC */
     @Column(length = 50)
     private String coin;
 
     @Builder
-    public Market(Long id, String coin) {
+    public Market(String coin) {
         this.coin = coin;
     }
 }
