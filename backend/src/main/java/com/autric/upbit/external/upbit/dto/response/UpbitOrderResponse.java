@@ -1,9 +1,18 @@
 package com.autric.upbit.external.upbit.dto.response;
 
+import com.autric.upbit.domain.chart.entity.Market;
+import com.autric.upbit.domain.member.entity.Member;
+import com.autric.upbit.domain.order.entity.OrderStatus;
+import com.autric.upbit.domain.order.entity.OrderType;
+import com.autric.upbit.domain.order.entity.Orders;
+import com.autric.upbit.domain.order.entity.Side;
+import com.autric.upbit.domain.signal.entity.Signals;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
+
+import java.math.BigDecimal;
 
 @Getter
 @Setter
@@ -70,4 +79,25 @@ public class UpbitOrderResponse {
     /** 해당 주문에 대한 체결 건수 */
     @JsonProperty("trades_count")
     private String tradesCount;
+
+    public Orders toOrder(
+            UpbitOrderResponse res,
+            Market market,
+            Member member,
+            Signals signal
+            ) {
+        return Orders.builder()
+                .member(member)
+                .market(market)
+                .signal(signal)
+                .uuid(res.uuid)
+                .side(Side.fromValue(res.side))
+                .ordType(OrderType.fromValue(res.ordType))
+                .volume(new BigDecimal(res.volume))
+                .price(new BigDecimal(res.price))
+                .status(OrderStatus.fromValue(res.state))
+                .build();
+    }
+
+
 }
