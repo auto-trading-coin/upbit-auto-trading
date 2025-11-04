@@ -88,8 +88,8 @@ public class UpbitOrderResponse {
                 .uuid(this.uuid)
                 .side(Side.fromValue(this.side))
                 .ordType(OrderType.fromValue(this.ordType))
-                .volume(new BigDecimal(this.volume))
-                .price(new BigDecimal(this.price))
+                .volume(this.volume != null ? new BigDecimal(this.volume) : BigDecimal.ZERO)
+                .price(this.price != null ? new BigDecimal(this.price) : BigDecimal.ZERO)
                 .status(OrderStatus.fromValue(this.state))
                 .build();
     }
