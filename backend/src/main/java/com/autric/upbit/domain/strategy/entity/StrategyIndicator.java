@@ -29,6 +29,7 @@ public class StrategyIndicator {
     @JoinColumn(name = "indicator_id")
     private Indicator indicator;
 
+    @Builder
     public StrategyIndicator(Strategy strategy, Indicator indicator) {
         this.strategy = strategy;
         this.indicator = indicator;

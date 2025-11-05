@@ -3,7 +3,7 @@ package com.autric.upbit.global.security.filter;
 import com.autric.upbit.domain.member.entity.Member;
 import com.autric.upbit.domain.member.repository.MemberRepository;
 import com.autric.upbit.global.response.code.ErrorCode;
-import com.autric.upbit.global.response.exception.RestApiException;
+import com.autric.upbit.global.response.exception.BusinessException;
 import com.autric.upbit.global.security.jwt.JwtProvider;
 import com.autric.upbit.global.security.oauth2.CustomOAuth2User;
 import jakarta.servlet.FilterChain;
@@ -56,7 +56,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {  // OncePerR
 
             // DB에서 사용자 조회
             Member member = memberRepository.findById(memberId)
-                    .orElseThrow(() -> new RestApiException(ErrorCode.MEMBER_NOT_FOUND));
+                    .orElseThrow(() -> new BusinessException(ErrorCode.MEMBER_NOT_FOUND));
 
             /**
              * CustomOAuth2User 생성 및 인증 객체 설정

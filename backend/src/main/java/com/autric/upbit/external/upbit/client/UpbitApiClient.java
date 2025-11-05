@@ -109,7 +109,8 @@ public class UpbitApiClient {
      *
      * @param jwtToken 업비트 JWT
      */
-    public void getAccount(String jwtToken) {
+    public void getAccount(String accessKey, String secretKey) {
+        String jwtToken = upbitUtil.createUpbitJwt(accessKey, secretKey);
         upbitWebClient.get()
                 .uri("/v1/accounts")
                 .header("Authorization", "Bearer " + jwtToken)
@@ -124,7 +125,8 @@ public class UpbitApiClient {
      * @param jwtToken 업비트 JWT
      * @return 사용자 별 잔고 리스트
      */
-    public List<UpbitAccountResponse> getAccounts(String jwtToken) {
+    public List<UpbitAccountResponse> getAccounts(String accessKey, String secretKey) {
+        String jwtToken = upbitUtil.createUpbitJwt(accessKey, secretKey);
         return upbitWebClient.get()
                 .uri("/v1/accounts")
                 .header("Authorization", "Bearer " + jwtToken)

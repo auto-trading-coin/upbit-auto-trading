@@ -1,7 +1,7 @@
 package com.autric.upbit.external.kafka.consumer;
 
+import com.autric.upbit.domain.signal.service.SignalProcessingService;
 import com.autric.upbit.external.kafka.dto.SignalMessage;
-import com.autric.upbit.external.upbit.service.UpbitSignalExecutionService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;
@@ -12,7 +12,8 @@ import org.springframework.stereotype.Service;
 @Slf4j
 public class KafkaConsumer {
 
-    private final UpbitSignalExecutionService upbitSignalExecutionService;
+    private final SignalProcessingService signalProcessingService;
+
     @KafkaListener(
             topics = "signal.out",
             groupId = "${spring.kafka.consumer.group-id}",
@@ -25,6 +26,6 @@ public class KafkaConsumer {
         log.info("[Kafka] 시그널 메세지 소비");
         log.info("전략 ID:{}, 타겟 코인:{}, 거래 유형:{}",
                 msg.getStrategy(), msg.getMarket(), msg.getSide().equals("bid") ? "매수" : "매도");
-        upbitSignalExecutionService.signalExecution(msg);
+        signalProcessingService.process(msg);
     }
 }

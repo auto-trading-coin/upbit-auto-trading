@@ -1,6 +1,7 @@
 package com.autric.upbit.domain.signal.entity;
 
 import com.autric.upbit.domain.chart.entity.Market;
+import com.autric.upbit.domain.order.entity.Side;
 import com.autric.upbit.domain.strategy.entity.Strategy;
 import com.autric.upbit.global.entity.BaseTimeEntity;
 import jakarta.persistence.*;
@@ -40,20 +41,20 @@ public class Signals extends BaseTimeEntity {
 
     /**
      * 매매 신호 유형
-     * ex) 신규 진입(entry), 청산(exit), 취소(cancel)
+     * ex) 신규 매수 ("bid"), 매도 ("ask")
      */
     @Enumerated(EnumType.STRING)
-    @Column(name = "signal_type")
-    private SignalType signalType;
+    @Column(name = "side")
+    private Side side;
 
     /**
      * StrategySignal 생성자 (Builder 패턴 사용)
      */
     @Builder
-    public Signals(Strategy strategy, Market market, SignalType signalType) {
+    public Signals(Strategy strategy, Market market, Side side) {
         this.strategy = strategy;
         this.market = market;
-        this.signalType = signalType;
+        this.side = side;
     }
 
 }

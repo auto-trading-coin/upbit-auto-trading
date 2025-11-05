@@ -2,7 +2,7 @@ package com.autric.upbit.global.response.handler;
 
 import com.autric.upbit.global.response.code.ErrorCode;
 import com.autric.upbit.global.response.code.ResponseCode;
-import com.autric.upbit.global.response.exception.RestApiException;
+import com.autric.upbit.global.response.exception.BusinessException;
 import com.autric.upbit.global.response.structure.ErrorResponse;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatusCode;
@@ -29,20 +29,20 @@ import java.util.stream.StreamSupport;
  * 클라이언트에게 일관된 에러 응답을 반환
  *
  * @RestControllerAdvice를 통해 전역 예외 핸들링을 구성하며,
- * 커스텀 예외(RestApiException), 유효성 검사 실패, 타입 불일치 등 다양한 상황을 처리
+ * 커스텀 예외(BusinessException), 유효성 검사 실패, 타입 불일치 등 다양한 상황을 처리
  * 에러 응답은 ErrorResponse 형태로 통일되며, 내부적으로 ResponseCode 기반으로 메시지 구성
  */
 @RestControllerAdvice
 public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
     /**
-     * 커스텀 예외인 RestApiException 처리
+     * 커스텀 예외인 BusinessException 처리
      *
      * 서비스 레이어에서 명시적으로 발생시킨 예외
      * 내부에 포함된 ResponseCode를 통해 응답 상태와 메시지 결정
      */
-    @ExceptionHandler(RestApiException.class)
-    public ResponseEntity<Object> handleRestApiException(final RestApiException e) {
+    @ExceptionHandler(BusinessException.class)
+    public ResponseEntity<Object> handleRestApiException(final BusinessException e) {
         final ResponseCode responseCode = e.getResponseCode();
         return handleExceptionInternal(responseCode);
     }
