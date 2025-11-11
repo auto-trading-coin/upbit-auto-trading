@@ -14,7 +14,7 @@ COPY . .
 RUN gradle clean build -x test --no-daemon
 
 # 런타임 스테이지 (경량 OpenJDK)
-FROM openjdk:17-jdk-slim
+FROM eclipse-temurin:17-jdk-jammy
 WORKDIR /app
 
 # 위에서 빌드된 JAR 파일 복사
