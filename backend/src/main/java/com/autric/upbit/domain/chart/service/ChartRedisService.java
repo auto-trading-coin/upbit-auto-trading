@@ -15,7 +15,7 @@ public class ChartRedisService {
 
     private final RedisTemplate<String, Object> redisTemplate;
 
-    private static final int CHART_LIMIT = 200;
+    private static final int CHART_LIMIT = 400;
 
     public void saveChartToRedis(String marketCode, int unit, List<ChartResponse> chartList) {
         String redisKey = "chart:" + marketCode + ":" + unit;
