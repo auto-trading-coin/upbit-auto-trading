@@ -24,6 +24,12 @@ public enum SuccessCode implements ResponseCode {
     DELETE_UPBIT_API_KEY_SUCCESS(HttpStatus.OK, "업비트 API KEY 삭제에 성공했습니다."),
 
     /*
+        STRATEGY
+    */
+    STRATEGIES_INFO_SUCCESS(HttpStatus.OK, "전략 목록 조회에 성공했습니다."),
+    STRATEGY_DETAIL_INFO_SUCCESS(HttpStatus.OK, "전략 상세 조회에 성공했습니다."),
+
+    /*
         TOKEN
      */
     TOKEN_REISSUE_SUCCESS(HttpStatus.CREATED, "토큰 재발급에 성공했습니다."),
