@@ -68,7 +68,7 @@ public class ChartSyncScheduler {
                     }
 
                     // 2) MySQL에서 최신 200개 조회 → ChartService.fetchLatest 사용
-                    List<ChartResponse> ChartList = chartService.fetchLatest(market.getCoin(), unit, 200);
+                    List<ChartResponse> ChartList = chartService.fetchLatest(market.getCoin(), unit, 400);
 
                     // 3) Redis 저장
                     chartRedisService.saveChartToRedis(market.getCoin(), unit, ChartList);
@@ -83,9 +83,9 @@ public class ChartSyncScheduler {
                 }
             }
             if(cnt > 0){
-                /**
-                 * 마켓 별 카프카 메세지 전송
-                 * */
+                /*
+                  마켓 별 카프카 메세지 전송
+                  */
                 PriceUpdateEvent event = PriceUpdateEvent.builder()
                         .eventId(UUID.randomUUID().toString())
                         .market(market.getCoin())
