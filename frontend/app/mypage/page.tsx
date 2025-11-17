@@ -1,8 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useAuth } from "@/components/auth-provider"
-import { useApi } from "@/lib/api-context"
+import { useApi } from "@/lib/ApiContext"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -10,18 +9,15 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Switch } from "@/components/ui/switch"
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { AlertCircle, Key, ShieldAlert, ShieldCheck } from "lucide-react"
-import { LoginModal } from "@/components/login-modal"
-
+import { Key, ShieldAlert, ShieldCheck } from "lucide-react"
+import { AuthGuard } from "@/components/common"
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 export default function MyPage() {
-  const { isAuthenticated, isLoading: authLoading } = useAuth()
-  const { apiKeyState, setApiKeys, clearApiKeys, tradingStatus, updateTradingSettings } = useApi()
+  const { apiKeyState, registerUpbitKey, deleteUpbitKey, tradingStatus, updateTradingSettings } = useApi()
   const [accessKey, setAccessKey] = useState("")
   const [secretKey, setSecretKey] = useState("")
   const [stopLossEnabled, setStopLossEnabled] = useState(tradingStatus.settings?.stopLossEnabled || true)
   const [stopLossLimit, setStopLossLimit] = useState(tradingStatus.settings?.stopLossLimit || 5)
-  const [showLoginModal, setShowLoginModal] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const router = useRouter()
 
@@ -33,13 +29,6 @@ export default function MyPage() {
     }
   }, [tradingStatus.settings])
 
-  // 로그인 상태 확인
-  useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
-      setShowLoginModal(true)
-    }
-  }, [authLoading, isAuthenticated])
-
   const handleRegisterApiKey = async () => {
     if (!accessKey || !secretKey) {
       return
@@ -47,12 +36,13 @@ export default function MyPage() {
 
     setIsSubmitting(true)
     try {
-      // API 키 등록
-      setApiKeys(accessKey, secretKey)
+      const success = await registerUpbitKey(accessKey, secretKey)
 
-      // 폼 초기화
-      setAccessKey("")
-      setSecretKey("")
+      if (success) {
+        // 폼 초기화
+        setAccessKey("")
+        setSecretKey("")
+      }
     } catch (error) {
       console.error("Failed to register API key:", error)
     } finally {
@@ -63,7 +53,7 @@ export default function MyPage() {
   const handleDeleteApiKey = async () => {
     setIsSubmitting(true)
     try {
-      clearApiKeys()
+      await deleteUpbitKey()
     } catch (error) {
       console.error("Failed to delete API key:", error)
     } finally {
@@ -85,35 +75,16 @@ export default function MyPage() {
     }
   }
 
-  if (authLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
-      </div>
-    )
-  }
-
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold tracking-tight">내 계정</h1>
-        <Button variant="outline" onClick={() => router.push("/")}>
-          대시보드로 돌아가기
-        </Button>
-      </div>
+    <AuthGuard>
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h1 className="text-3xl font-bold tracking-tight">내 계정</h1>
+          <Button variant="outline" onClick={() => router.push("/")}>
+            대시보드로 돌아가기
+          </Button>
+        </div>
 
-      {!isAuthenticated ? (
-        <Alert>
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>로그인이 필요합니다</AlertTitle>
-          <AlertDescription>
-            계정 설정을 관리하기 위해 로그인해주세요.
-            <Button variant="link" className="p-0 h-auto ml-2" onClick={() => setShowLoginModal(true)}>
-              로그인하기
-            </Button>
-          </AlertDescription>
-        </Alert>
-      ) : (
         <Tabs defaultValue="api-keys" className="w-full">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="api-keys">API 키 관리</TabsTrigger>
@@ -278,9 +249,7 @@ export default function MyPage() {
             </Card>
           </TabsContent>
         </Tabs>
-      )}
-
-      <LoginModal open={showLoginModal} onOpenChange={setShowLoginModal} />
-    </div>
+      </div>
+    </AuthGuard>
   )
 }

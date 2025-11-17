@@ -1,14 +1,14 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useAuth } from "@/components/auth-provider"
+import { useAuth } from "@/components/AuthProvider"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { AlertCircle, ArrowDown, ArrowUp, ExternalLink, Search } from "lucide-react"
-import { LoginModal } from "@/components/login-modal"
+import { LoginModal } from "@/components/LoginModal"
 
 // 더미 데이터
 const dummyMarketData = [

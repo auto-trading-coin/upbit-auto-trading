@@ -1,8 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { useAuth } from '@/components/auth-provider';
-import { useApi } from '@/lib/api-context';
+import { useAuth } from '@/components/AuthProvider';
+import { useApi } from '@/lib/ApiContext';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/components/ui/use-toast';
 import { Button } from '@/components/ui/button';
@@ -27,7 +27,8 @@ import {
     TrendingDown,
     TrendingUp,
 } from 'lucide-react';
-import { LoginModal } from '@/components/login-modal';
+import { LoginModal } from '@/components/LoginModal';
+import { StatusBadge } from '@/components/common';
 
 export default function Dashboard() {
     const { isAuthenticated, isLoading } = useAuth();
@@ -263,11 +264,11 @@ export default function Dashboard() {
                                             전략 선택 필요
                                         </Badge>
                                     ) : tradingStatus.isRunning ? (
-                                        <Badge className="bg-green-500">실행 중</Badge>
+                                        <StatusBadge status="running" />
                                     ) : (
-                                        <Badge variant="outline">중지됨</Badge>
+                                        <StatusBadge status="stopped" />
                                     )}
-                                    {tradingStatus.hasError && <Badge variant="destructive">오류 발생</Badge>}
+                                    {tradingStatus.hasError && <StatusBadge status="error" />}
                                 </div>
                                 <p className="text-xs text-muted-foreground mt-2">
                                     {!apiKeyState.hasApiKey

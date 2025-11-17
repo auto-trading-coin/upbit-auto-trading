@@ -1,8 +1,8 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-import { useAuth } from "@/components/auth-provider"
-import { useApi } from "@/lib/api-context"
+import { useAuth } from "@/components/AuthProvider"
+import { useApi } from "@/lib/ApiContext"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -23,7 +23,7 @@ import {
   TrendingUp,
   Wallet,
 } from "lucide-react"
-import { LoginModal } from "@/components/login-modal"
+import { LoginModal } from "@/components/LoginModal"
 
 // 타입 정의
 interface Holding {

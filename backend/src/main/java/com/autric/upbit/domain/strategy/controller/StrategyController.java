@@ -9,6 +9,7 @@ import com.autric.upbit.global.response.code.SuccessCode;
 import com.autric.upbit.global.response.structure.SuccessResponse;
 import com.autric.upbit.global.security.oauth2.CustomOAuth2User;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
@@ -16,6 +17,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+@Slf4j
 @Controller
 @RequiredArgsConstructor
 @RequestMapping("/strategy")
@@ -58,6 +60,7 @@ public class StrategyController {
     @PatchMapping
     public ResponseEntity<?> updateStrategy(@AuthenticationPrincipal CustomOAuth2User user, @RequestBody StrategyUpdateRequest dto){
         memberService.updateStrategy(user, dto);
+        log.info("patch 요청 받음 {}", dto.getStrategyId());
         return SuccessResponse.createSuccess(SuccessCode.UPDATE_STRATEGY_SUCCESS);
     }
 }

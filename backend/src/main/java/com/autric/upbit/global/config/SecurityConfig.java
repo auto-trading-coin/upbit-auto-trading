@@ -71,7 +71,7 @@ public class SecurityConfig {
         configuration.setAllowedOrigins(List.of("http://localhost:3000",
                                                 "https://autric.site",
                                                 "https://www.autric.site"));
-        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-Requested-With", "Accept"));
         configuration.setExposedHeaders(List.of("Authorization"));
         configuration.setAllowCredentials(true);
