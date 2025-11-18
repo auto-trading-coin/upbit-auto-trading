@@ -17,6 +17,7 @@ public class MemberLoginResponse {
     private boolean tradeActive;
     private boolean strategyRegistered;
     private boolean apiKeyRegistered;
+    private Long strategyId;
 
     public static MemberLoginResponse fromEntity(Member member){
         return MemberLoginResponse.builder()
@@ -25,6 +26,7 @@ public class MemberLoginResponse {
                 .tradeActive(member.getTradeActive())
                 .strategyRegistered(member.hasStrategy())
                 .apiKeyRegistered(member.hasApiKey())
+                .strategyId(member.hasStrategy() ? member.getStrategy().getId() : null)
                 .build();
     }
 }
