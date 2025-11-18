@@ -53,12 +53,13 @@ class EMACross(Strategy):
             )
         units_sorted = sorted(data_by_unit.keys())
         votes = []
+        # 모든 경우에 HOLD 반환 (시그널 반환 비활성 상태)
         for u in units_sorted:
             votes.append(self.evaluate(market, u, data_by_unit[u]).decision)
         if all(v == Decision.BID for v in votes):
-            dec = Decision.BID
+            dec = Decision.HOLD
         elif all(v == Decision.ASK for v in votes):
-            dec = Decision.ASK
+            dec = Decision.HOLD
         else:
             dec = Decision.HOLD
         return StrategyResult(
