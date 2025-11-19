@@ -63,7 +63,7 @@ export const useWebSocketStore = create<WebSocketState & WebSocketActions>((set)
    * WebSocket 연결 상태 설정
    */
   setConnected: (connected) => 
-    set({ connected, error: connected ? null : undefined }),
+    set({ connected, error: connected ? null : null }),
   
   /**
    * WebSocket 재연결 상태 설정
@@ -107,5 +107,10 @@ export const useWebSocketStore = create<WebSocketState & WebSocketActions>((set)
    * 전체 상태 초기화
    */
   reset: () =>
-    set(initialState),
+    set({
+      connected: false,
+      reconnecting: false,
+      subscriptions: new Set(),
+      error: null,
+    }),
 }))

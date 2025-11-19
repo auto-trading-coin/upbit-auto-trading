@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useCallback } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useWebSocketStore } from '@/stores'
 import { queryKeys } from '@/lib/utils/queryKeys'
@@ -68,6 +68,8 @@ interface UpbitWebSocketTicker {
  */
 export const useWebSocket = () => {
   const wsRef = useRef<WebSocket | null>(null)
+  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const isConnectingRef = useRef(false)
   const queryClient = useQueryClient()
   
   const {
@@ -77,11 +79,37 @@ export const useWebSocket = () => {
     setError,
   } = useWebSocketStore()
   
-  useEffect(() => {
-    // 구독할 마켓이 없으면 연결하지 않음
-    if (subscriptions.size === 0) {
+  // ✨ 구독 메시지 전송 함수 (재사용)
+  const sendSubscribeMessage = useCallback((ws: WebSocket, codes: string[]) => {
+    if (ws.readyState === WebSocket.OPEN && codes.length > 0) {
+      const subscribeMessage = [
+        { ticket: 'upbit-auto-trading' },
+        {
+          type: 'ticker',
+          codes,
+        },
+      ]
+      
+      ws.send(JSON.stringify(subscribeMessage))
+      console.log(`[WebSocket] Subscribed: ${codes.length} markets`)
+    }
+  }, [])
+  
+  // ✨ WebSocket 연결 함수 (재사용)
+  const connect = useCallback(() => {
+    // 이미 연결 중이거나 연결되어 있으면 무시
+    if (isConnectingRef.current || wsRef.current?.readyState === WebSocket.OPEN) {
       return
     }
+    
+    // 구독할 마켓이 없으면 연결하지 않음
+    const codes = Array.from(subscriptions)
+    if (codes.length === 0) {
+      return
+    }
+    
+    isConnectingRef.current = true
+    console.log('[WebSocket] Connecting...')
     
     // WebSocket 연결
     const ws = new WebSocket(WS_URL)
@@ -89,20 +117,13 @@ export const useWebSocket = () => {
     
     ws.onopen = () => {
       console.log('[WebSocket] Connected')
+      isConnectingRef.current = false
       setConnected(true)
+      setReconnecting(false)
       setError(null)
       
       // 구독 메시지 전송
-      const subscribeMessage = [
-        { ticket: 'upbit-auto-trading' },
-        {
-          type: 'ticker',
-          codes: Array.from(subscriptions),
-        },
-      ]
-      
-      ws.send(JSON.stringify(subscribeMessage))
-      console.log('[WebSocket] Subscribed:', Array.from(subscriptions))
+      sendSubscribeMessage(ws, codes)
     }
     
     ws.onmessage = async (event) => {
@@ -152,31 +173,62 @@ export const useWebSocket = () => {
     
     ws.onerror = (event) => {
       console.error('[WebSocket] Error:', event)
+      isConnectingRef.current = false
       setError('WebSocket 연결 오류')
     }
     
     ws.onclose = () => {
       console.log('[WebSocket] Closed')
+      isConnectingRef.current = false
       setConnected(false)
       
-      // 3초 후 재연결 시도
-      setTimeout(() => {
-        console.log('[WebSocket] Reconnecting...')
+      // 구독할 마켓이 남아있으면 3초 후 재연결 시도
+      const codes = Array.from(subscriptions)
+      if (codes.length > 0) {
+        console.log('[WebSocket] Reconnecting in 3 seconds...')
         setReconnecting(true)
-        // useEffect가 다시 실행되어 재연결됨
-      }, 3000)
+        
+        reconnectTimeoutRef.current = setTimeout(() => {
+          connect()
+        }, 3000)
+      }
     }
+  }, [subscriptions, queryClient, setConnected, setError, setReconnecting, sendSubscribeMessage])
+  
+  // ✨ 초기 연결 (한 번만)
+  useEffect(() => {
+    connect()
     
     // Cleanup
     return () => {
-      if (ws.readyState === WebSocket.OPEN) {
-        console.log('[WebSocket] Closing connection')
-        ws.close()
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current)
       }
+      
+      if (wsRef.current?.readyState === WebSocket.OPEN) {
+        console.log('[WebSocket] Closing connection')
+        wsRef.current.close()
+      }
+      
       setConnected(false)
       setReconnecting(false)
     }
-  }, [subscriptions, queryClient, setConnected, setError, setReconnecting])
+  }, []) // ✨ 의존성 배열 비움 - 초기 마운트 시 한 번만 실행
+  
+  // ✨ 구독 변경 시 기존 연결에 메시지만 재전송 (재연결 안 함)
+  useEffect(() => {
+    const ws = wsRef.current
+    const codes = Array.from(subscriptions)
+    
+    // WebSocket이 연결되어 있고 구독할 마켓이 있으면 메시지 재전송
+    if (ws?.readyState === WebSocket.OPEN && codes.length > 0) {
+      sendSubscribeMessage(ws, codes)
+    }
+    // WebSocket이 없거나 닫혀있고, 구독할 마켓이 있으면 새로 연결
+    else if ((!ws || ws.readyState === WebSocket.CLOSED) && codes.length > 0) {
+      connect()
+    }
+  }, [subscriptions]) // ✨ subscriptions 변경 시에만 실행 (재연결 안 함)
   
   return {
     send: (data: any) => {
