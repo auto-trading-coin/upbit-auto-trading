@@ -1,17 +1,15 @@
 "use client"
 
 import { useState, useEffect, useRef, useCallback } from "react"
-import { useAuth } from "@/components/AuthProvider"
-import { useApi } from "@/lib/ApiContext"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { AlertCircle, AlertTriangle, Check, Clock, Key, Loader2, X, Zap } from "lucide-react"
-import { LoginModal } from "@/components/LoginModal"
+import { AlertTriangle, Check, Clock, Key, Loader2, X, Zap } from "lucide-react"
+import { AuthGuard } from "@/components/common"
+import { useUser } from "@/hooks/queries/useUser"
 
 // 타입 정의
 interface Order {
@@ -134,9 +132,9 @@ const INITIAL_SIGNALS = generateDummySignals(20)
 const LOAD_MORE_SIZE = 10
 
 export default function OrdersPage() {
-  const { isAuthenticated } = useAuth()
-  const { apiKeyState } = useApi()
-  const [showLoginModal, setShowLoginModal] = useState<boolean>(false)
+  // React Query hooks
+  const { data: user } = useUser()
+  
   const [activeTab, setActiveTab] = useState<string>("orders")
   const [orders, setOrders] = useState<Order[]>(INITIAL_ORDERS)
   const [signals, setSignals] = useState<Signal[]>(INITIAL_SIGNALS)
@@ -279,338 +277,316 @@ export default function OrdersPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold tracking-tight">주문 관리</h1>
-        <Button onClick={() => router.push("/")} variant="outline">
-          대시보드로 돌아가기
-        </Button>
-      </div>
-
-      {!isAuthenticated && (
-        <Alert>
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>로그인이 필요합니다</AlertTitle>
-          <AlertDescription>
-            주문 내역을 확인하기 위해 로그인해주세요.
-            <Button variant="link" className="p-0 h-auto ml-2" onClick={() => setShowLoginModal(true)}>
-              로그인하기
-            </Button>
-          </AlertDescription>
-        </Alert>
-      )}
-
-      {isAuthenticated && !apiKeyState.hasApiKey && (
-        <Card className="border-amber-300 bg-amber-50">
-          <CardHeader>
-            <CardTitle className="flex items-center text-amber-800">
-              <Key className="h-5 w-5 mr-2" />
-              업비트 API 키 등록이 필요합니다
-            </CardTitle>
-            <CardDescription className="text-amber-700">
-              주문 내역을 확인하기 위해서는 업비트 API 키가 필요합니다.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-col space-y-4">
-              <p className="text-sm text-amber-700">API 키를 등록하면 다음 기능을 이용할 수 있습니다:</p>
-              <ul className="list-disc list-inside text-sm text-amber-700 space-y-1">
-                <li>실시간 주문 내역 확인</li>
-                <li>주문 취소</li>
-                <li>시그널 로그 확인</li>
-              </ul>
-              <Button onClick={() => router.push("/mypage")} className="w-full sm:w-auto">
-                <Key className="mr-2 h-4 w-4" />
-                API 키 등록하기
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {isAuthenticated && !apiKeyState.hasApiKey ? (
-        <div className="flex flex-col items-center justify-center py-12 text-center">
-          <Key className="h-16 w-16 text-amber-500 mb-6" />
-          <h2 className="text-2xl font-bold mb-2">API 키 등록이 필요합니다</h2>
-          <p className="text-muted-foreground mb-6 max-w-md">
-            실제 주문 내역을 확인하기 위해 업비트 API 키를 등록해주세요.
-          </p>
-          <Button onClick={() => router.push("/mypage")}>API 키 등록하기</Button>
+    <AuthGuard>
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h1 className="text-3xl font-bold tracking-tight">주문 관리</h1>
+          <Button onClick={() => router.push("/")} variant="outline">
+            대시보드로 돌아가기
+          </Button>
         </div>
-      ) : !isAuthenticated ? (
-        <div className="flex flex-col items-center justify-center py-12 text-center">
-          <AlertCircle className="h-16 w-16 text-muted-foreground mb-6" />
-          <h2 className="text-2xl font-bold mb-2">주문 내역을 확인하려면 로그인하세요</h2>
-          <p className="text-muted-foreground mb-6 max-w-md">
-            로그인하여 주문 내역, 시그널 로그 등 다양한 정보를 확인하세요.
-          </p>
-          <Button onClick={() => setShowLoginModal(true)}>로그인하기</Button>
-        </div>
-      ) : (
-        <Tabs defaultValue="orders" className="w-full" onValueChange={setActiveTab}>
-          <TabsList>
-            <TabsTrigger value="orders">주문 내역</TabsTrigger>
-            <TabsTrigger value="signals">시그널 로그</TabsTrigger>
-          </TabsList>
 
-          <TabsContent value="orders" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>주문 내역</CardTitle>
-                <CardDescription>최근 주문 내역을 확인합니다.</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="overflow-x-auto">
-                  <table className="w-full border-collapse">
-                    <thead>
-                      <tr className="border-b">
-                        <th className="py-3 px-4 text-left font-medium">주문 ID</th>
-                        <th className="py-3 px-4 text-left font-medium">마켓</th>
-                        <th className="py-3 px-4 text-left font-medium">주문 유형</th>
-                        <th className="py-3 px-4 text-right font-medium">주문 가격</th>
-                        <th className="py-3 px-4 text-right font-medium">주문 수량</th>
-                        <th className="py-3 px-4 text-right font-medium">총 금액</th>
-                        <th className="py-3 px-4 text-center font-medium">상태</th>
-                        <th className="py-3 px-4 text-center font-medium">생성 시간</th>
-                        <th className="py-3 px-4 text-center font-medium">시그널</th>
-                        <th className="py-3 px-4 text-center font-medium">액션</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {orders.map((order) => (
-                        <tr key={order.id} className="border-b hover:bg-muted/50">
-                          <td className="py-3 px-4 text-sm">{order.id}</td>
-                          <td className="py-3 px-4 text-sm">{order.market}</td>
-                          <td className="py-3 px-4">
-                            <Badge variant={order.side === "bid" ? "default" : "destructive"}>
-                              {order.side === "bid" ? "매수" : "매도"}
-                            </Badge>
-                          </td>
-                          <td className="py-3 px-4 text-right">{order.price.toLocaleString()}원</td>
-                          <td className="py-3 px-4 text-right">{order.volume}</td>
-                          <td className="py-3 px-4 text-right">{(order.price * order.volume).toLocaleString()}원</td>
-                          <td className="py-3 px-4 text-center">
-                            {order.status === "wait" ? (
-                              <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">
-                                <Clock className="h-3 w-3 mr-1" />
-                                대기
-                              </Badge>
-                            ) : order.status === "done" ? (
-                              <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                                <Check className="h-3 w-3 mr-1" />
-                                완료
-                              </Badge>
-                            ) : (
-                              <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
-                                <X className="h-3 w-3 mr-1" />
-                                취소
-                              </Badge>
-                            )}
-                          </td>
-                          <td className="py-3 px-4 text-center text-sm">{formatDate(order.created_at)}</td>
-                          <td className="py-3 px-4 text-center">
-                            {order.related_signal_id && (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="h-8 text-xs bg-blue-50 text-blue-700 border-blue-200"
-                                onClick={() => handleViewRelatedSignals(order.id)}
-                              >
-                                <Zap className="h-3 w-3 mr-1" />
-                                시그널 보기
-                              </Button>
-                            )}
-                          </td>
-                          <td className="py-3 px-4 text-center">
-                            {order.status === "wait" && (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="h-8 text-xs bg-red-50 text-red-700 border-red-200"
-                                onClick={() => handleCancelOrder(order.id)}
-                              >
-                                <X className="h-3 w-3 mr-1" />
-                                취소
-                              </Button>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-
-                {/* 무한 스크롤 로딩 인디케이터 */}
-                <div ref={ordersEndRef} className="py-4 text-center">
-                  {isLoadingMoreOrders ? (
-                    <div className="flex items-center justify-center">
-                      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground mr-2" />
-                      <span className="text-sm text-muted-foreground">데이터를 불러오는 중...</span>
-                    </div>
-                  ) : hasMoreOrders ? (
-                    <span className="text-sm text-muted-foreground">스크롤하여 더 불러오기</span>
-                  ) : (
-                    <span className="text-sm text-muted-foreground">모든 주문 내역을 불러왔습니다</span>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="signals" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>시그널 로그</CardTitle>
-                <CardDescription>자동 매매 시그널 로그를 확인합니다.</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="overflow-x-auto">
-                  <table className="w-full border-collapse">
-                    <thead>
-                      <tr className="border-b">
-                        <th className="py-3 px-4 text-left font-medium">시그널 ID</th>
-                        <th className="py-3 px-4 text-left font-medium">전략</th>
-                        <th className="py-3 px-4 text-left font-medium">마켓</th>
-                        <th className="py-3 px-4 text-left font-medium">매매 유형</th>
-                        <th className="py-3 px-4 text-left font-medium">트리거 조건</th>
-                        <th className="py-3 px-4 text-center font-medium">생성 시간</th>
-                        <th className="py-3 px-4 text-center font-medium">상태</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {signals.map((signal) => (
-                        <tr key={signal.id} className="border-b hover:bg-muted/50">
-                          <td className="py-3 px-4 text-sm">{signal.id}</td>
-                          <td className="py-3 px-4">{signal.strategy}</td>
-                          <td className="py-3 px-4">{signal.market}</td>
-                          <td className="py-3 px-4">
-                            <Badge variant={signal.side === "bid" ? "default" : "destructive"}>
-                              {signal.side === "bid" ? "매수" : "매도"}
-                            </Badge>
-                          </td>
-                          <td className="py-3 px-4">
-                            <code className="px-1 py-0.5 rounded bg-muted font-mono text-sm">
-                              {signal.trigger_condition}
-                            </code>
-                          </td>
-                          <td className="py-3 px-4 text-center text-sm">{formatDate(signal.created_at)}</td>
-                          <td className="py-3 px-4 text-center">
-                            {signal.status === "triggered" ? (
-                              <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                                <Check className="h-3 w-3 mr-1" />
-                                실행됨
-                              </Badge>
-                            ) : signal.status === "pending" ? (
-                              <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">
-                                <Clock className="h-3 w-3 mr-1" />
-                                대기중
-                              </Badge>
-                            ) : (
-                              <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
-                                <X className="h-3 w-3 mr-1" />
-                                만료됨
-                              </Badge>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-
-                {/* 무한 스크롤 로딩 인디케이터 */}
-                <div ref={signalsEndRef} className="py-4 text-center">
-                  {isLoadingMoreSignals ? (
-                    <div className="flex items-center justify-center">
-                      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground mr-2" />
-                      <span className="text-sm text-muted-foreground">데이터를 불러오는 중...</span>
-                    </div>
-                  ) : hasMoreSignals ? (
-                    <span className="text-sm text-muted-foreground">스크롤하여 더 불러오기</span>
-                  ) : (
-                    <span className="text-sm text-muted-foreground">모든 시그널 로그를 불러왔습니다</span>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
-      )}
-
-      {/* 시그널 상세 모달 */}
-      <Dialog open={showSignalModal} onOpenChange={setShowSignalModal}>
-        <DialogContent className="max-w-3xl max-h-[80vh] overflow-hidden flex flex-col">
-          <DialogHeader>
-            <DialogTitle>관련 시그널 정보</DialogTitle>
-            <DialogDescription>주문과 관련된 시그널 정보를 확인합니다.</DialogDescription>
-          </DialogHeader>
-          <div className="overflow-y-auto flex-1 pr-2">
-            {selectedSignals.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-8 text-center">
-                <AlertTriangle className="h-12 w-12 text-muted-foreground mb-4" />
-                <h3 className="text-lg font-medium mb-2">관련 시그널이 없습니다</h3>
-                <p className="text-sm text-muted-foreground max-w-md">
-                  이 주문과 관련된 시그널 정보가 없습니다. 수동 주문이거나 시그널 정보가 삭제되었을 수 있습니다.
-                </p>
+        {user && !user.apiKeyRegistered && (
+          <Card className="border-amber-300 bg-amber-50">
+            <CardHeader>
+              <CardTitle className="flex items-center text-amber-800">
+                <Key className="h-5 w-5 mr-2" />
+                업비트 API 키 등록이 필요합니다
+              </CardTitle>
+              <CardDescription className="text-amber-700">
+                주문 내역을 확인하기 위해서는 업비트 API 키가 필요합니다.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col space-y-4">
+                <p className="text-sm text-amber-700">API 키를 등록하면 다음 기능을 이용할 수 있습니다:</p>
+                <ul className="list-disc list-inside text-sm text-amber-700 space-y-1">
+                  <li>실시간 주문 내역 확인</li>
+                  <li>주문 취소</li>
+                  <li>시그널 로그 확인</li>
+                </ul>
+                <Button onClick={() => router.push("/mypage")} className="w-full sm:w-auto">
+                  <Key className="mr-2 h-4 w-4" />
+                  API 키 등록하기
+                </Button>
               </div>
-            ) : (
-              <table className="w-full border-collapse">
-                <thead className="sticky top-0 bg-background z-10">
-                  <tr className="border-b">
-                    <th className="py-3 px-4 text-left font-medium">시그널 ID</th>
-                    <th className="py-3 px-4 text-left font-medium">전략</th>
-                    <th className="py-3 px-4 text-left font-medium">마켓</th>
-                    <th className="py-3 px-4 text-left font-medium">매매 유형</th>
-                    <th className="py-3 px-4 text-left font-medium">트리거 조건</th>
-                    <th className="py-3 px-4 text-center font-medium">생성 시간</th>
-                    <th className="py-3 px-4 text-center font-medium">상태</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {selectedSignals.map((signal) => (
-                    <tr key={signal.id} className="border-b hover:bg-muted/50">
-                      <td className="py-3 px-4 text-sm">{signal.id}</td>
-                      <td className="py-3 px-4">{signal.strategy}</td>
-                      <td className="py-3 px-4">{signal.market}</td>
-                      <td className="py-3 px-4">
-                        <Badge variant={signal.side === "bid" ? "default" : "destructive"}>
-                          {signal.side === "bid" ? "매수" : "매도"}
-                        </Badge>
-                      </td>
-                      <td className="py-3 px-4">
-                        <code className="px-1 py-0.5 rounded bg-muted font-mono text-sm">
-                          {signal.trigger_condition}
-                        </code>
-                      </td>
-                      <td className="py-3 px-4 text-center text-sm">{formatDate(signal.created_at)}</td>
-                      <td className="py-3 px-4 text-center">
-                        {signal.status === "triggered" ? (
-                          <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                            <Check className="h-3 w-3 mr-1" />
-                            실행됨
-                          </Badge>
-                        ) : signal.status === "pending" ? (
-                          <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">
-                            <Clock className="h-3 w-3 mr-1" />
-                            대기중
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
-                            <X className="h-3 w-3 mr-1" />
-                            만료됨
-                          </Badge>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
+            </CardContent>
+          </Card>
+        )}
 
-      <LoginModal open={showLoginModal} onOpenChange={setShowLoginModal} />
-    </div>
+        {user && !user.apiKeyRegistered ? (
+          <div className="flex flex-col items-center justify-center py-12 text-center">
+            <Key className="h-16 w-16 text-amber-500 mb-6" />
+            <h2 className="text-2xl font-bold mb-2">API 키 등록이 필요합니다</h2>
+            <p className="text-muted-foreground mb-6 max-w-md">
+              실제 주문 내역을 확인하기 위해 업비트 API 키를 등록해주세요.
+            </p>
+            <Button onClick={() => router.push("/mypage")}>API 키 등록하기</Button>
+          </div>
+        ) : (
+          <Tabs defaultValue="orders" className="w-full" onValueChange={setActiveTab}>
+            <TabsList>
+              <TabsTrigger value="orders">주문 내역</TabsTrigger>
+              <TabsTrigger value="signals">시그널 로그</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="orders" className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle>주문 내역</CardTitle>
+                  <CardDescription>최근 주문 내역을 확인합니다.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="overflow-x-auto">
+                    <table className="w-full border-collapse">
+                      <thead>
+                        <tr className="border-b">
+                          <th className="py-3 px-4 text-left font-medium">주문 ID</th>
+                          <th className="py-3 px-4 text-left font-medium">마켓</th>
+                          <th className="py-3 px-4 text-left font-medium">주문 유형</th>
+                          <th className="py-3 px-4 text-right font-medium">주문 가격</th>
+                          <th className="py-3 px-4 text-right font-medium">주문 수량</th>
+                          <th className="py-3 px-4 text-right font-medium">총 금액</th>
+                          <th className="py-3 px-4 text-center font-medium">상태</th>
+                          <th className="py-3 px-4 text-center font-medium">생성 시간</th>
+                          <th className="py-3 px-4 text-center font-medium">시그널</th>
+                          <th className="py-3 px-4 text-center font-medium">액션</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {orders.map((order) => (
+                          <tr key={order.id} className="border-b hover:bg-muted/50">
+                            <td className="py-3 px-4 text-sm">{order.id}</td>
+                            <td className="py-3 px-4 text-sm">{order.market}</td>
+                            <td className="py-3 px-4">
+                              <Badge variant={order.side === "bid" ? "default" : "destructive"}>
+                                {order.side === "bid" ? "매수" : "매도"}
+                              </Badge>
+                            </td>
+                            <td className="py-3 px-4 text-right">{order.price.toLocaleString()}원</td>
+                            <td className="py-3 px-4 text-right">{order.volume}</td>
+                            <td className="py-3 px-4 text-right">{(order.price * order.volume).toLocaleString()}원</td>
+                            <td className="py-3 px-4 text-center">
+                              {order.status === "wait" ? (
+                                <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">
+                                  <Clock className="h-3 w-3 mr-1" />
+                                  대기
+                                </Badge>
+                              ) : order.status === "done" ? (
+                                <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                                  <Check className="h-3 w-3 mr-1" />
+                                  완료
+                                </Badge>
+                              ) : (
+                                <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
+                                  <X className="h-3 w-3 mr-1" />
+                                  취소
+                                </Badge>
+                              )}
+                            </td>
+                            <td className="py-3 px-4 text-center text-sm">{formatDate(order.created_at)}</td>
+                            <td className="py-3 px-4 text-center">
+                              {order.related_signal_id && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-8 text-xs bg-blue-50 text-blue-700 border-blue-200"
+                                  onClick={() => handleViewRelatedSignals(order.id)}
+                                >
+                                  <Zap className="h-3 w-3 mr-1" />
+                                  시그널 보기
+                                </Button>
+                              )}
+                            </td>
+                            <td className="py-3 px-4 text-center">
+                              {order.status === "wait" && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-8 text-xs bg-red-50 text-red-700 border-red-200"
+                                  onClick={() => handleCancelOrder(order.id)}
+                                >
+                                  <X className="h-3 w-3 mr-1" />
+                                  취소
+                                </Button>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* 무한 스크롤 로딩 인디케이터 */}
+                  <div ref={ordersEndRef} className="py-4 text-center">
+                    {isLoadingMoreOrders ? (
+                      <div className="flex items-center justify-center">
+                        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground mr-2" />
+                        <span className="text-sm text-muted-foreground">데이터를 불러오는 중...</span>
+                      </div>
+                    ) : hasMoreOrders ? (
+                      <span className="text-sm text-muted-foreground">스크롤하여 더 불러오기</span>
+                    ) : (
+                      <span className="text-sm text-muted-foreground">모든 주문 내역을 불러왔습니다</span>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="signals" className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle>시그널 로그</CardTitle>
+                  <CardDescription>자동 매매 시그널 로그를 확인합니다.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="overflow-x-auto">
+                    <table className="w-full border-collapse">
+                      <thead>
+                        <tr className="border-b">
+                          <th className="py-3 px-4 text-left font-medium">시그널 ID</th>
+                          <th className="py-3 px-4 text-left font-medium">전략</th>
+                          <th className="py-3 px-4 text-left font-medium">마켓</th>
+                          <th className="py-3 px-4 text-left font-medium">매매 유형</th>
+                          <th className="py-3 px-4 text-left font-medium">트리거 조건</th>
+                          <th className="py-3 px-4 text-center font-medium">생성 시간</th>
+                          <th className="py-3 px-4 text-center font-medium">상태</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {signals.map((signal) => (
+                          <tr key={signal.id} className="border-b hover:bg-muted/50">
+                            <td className="py-3 px-4 text-sm">{signal.id}</td>
+                            <td className="py-3 px-4">{signal.strategy}</td>
+                            <td className="py-3 px-4">{signal.market}</td>
+                            <td className="py-3 px-4">
+                              <Badge variant={signal.side === "bid" ? "default" : "destructive"}>
+                                {signal.side === "bid" ? "매수" : "매도"}
+                              </Badge>
+                            </td>
+                            <td className="py-3 px-4">
+                              <code className="px-1 py-0.5 rounded bg-muted font-mono text-sm">
+                                {signal.trigger_condition}
+                              </code>
+                            </td>
+                            <td className="py-3 px-4 text-center text-sm">{formatDate(signal.created_at)}</td>
+                            <td className="py-3 px-4 text-center">
+                              {signal.status === "triggered" ? (
+                                <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                                  <Check className="h-3 w-3 mr-1" />
+                                  실행됨
+                                </Badge>
+                              ) : signal.status === "pending" ? (
+                                <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">
+                                  <Clock className="h-3 w-3 mr-1" />
+                                  대기중
+                                </Badge>
+                              ) : (
+                                <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
+                                  <X className="h-3 w-3 mr-1" />
+                                  만료됨
+                                </Badge>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* 무한 스크롤 로딩 인디케이터 */}
+                  <div ref={signalsEndRef} className="py-4 text-center">
+                    {isLoadingMoreSignals ? (
+                      <div className="flex items-center justify-center">
+                        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground mr-2" />
+                        <span className="text-sm text-muted-foreground">데이터를 불러오는 중...</span>
+                      </div>
+                    ) : hasMoreSignals ? (
+                      <span className="text-sm text-muted-foreground">스크롤하여 더 불러오기</span>
+                    ) : (
+                      <span className="text-sm text-muted-foreground">모든 시그널 로그를 불러왔습니다</span>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+        )}
+
+        {/* 시그널 상세 모달 */}
+        <Dialog open={showSignalModal} onOpenChange={setShowSignalModal}>
+          <DialogContent className="max-w-3xl max-h-[80vh] overflow-hidden flex flex-col">
+            <DialogHeader>
+              <DialogTitle>관련 시그널 정보</DialogTitle>
+              <DialogDescription>주문과 관련된 시그널 정보를 확인합니다.</DialogDescription>
+            </DialogHeader>
+            <div className="overflow-y-auto flex-1 pr-2">
+              {selectedSignals.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-8 text-center">
+                  <AlertTriangle className="h-12 w-12 text-muted-foreground mb-4" />
+                  <h3 className="text-lg font-medium mb-2">관련 시그널이 없습니다</h3>
+                  <p className="text-sm text-muted-foreground max-w-md">
+                    이 주문과 관련된 시그널 정보가 없습니다. 수동 주문이거나 시그널 정보가 삭제되었을 수 있습니다.
+                  </p>
+                </div>
+              ) : (
+                <table className="w-full border-collapse">
+                  <thead className="sticky top-0 bg-background z-10">
+                    <tr className="border-b">
+                      <th className="py-3 px-4 text-left font-medium">시그널 ID</th>
+                      <th className="py-3 px-4 text-left font-medium">전략</th>
+                      <th className="py-3 px-4 text-left font-medium">마켓</th>
+                      <th className="py-3 px-4 text-left font-medium">매매 유형</th>
+                      <th className="py-3 px-4 text-left font-medium">트리거 조건</th>
+                      <th className="py-3 px-4 text-center font-medium">생성 시간</th>
+                      <th className="py-3 px-4 text-center font-medium">상태</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {selectedSignals.map((signal) => (
+                      <tr key={signal.id} className="border-b hover:bg-muted/50">
+                        <td className="py-3 px-4 text-sm">{signal.id}</td>
+                        <td className="py-3 px-4">{signal.strategy}</td>
+                        <td className="py-3 px-4">{signal.market}</td>
+                        <td className="py-3 px-4">
+                          <Badge variant={signal.side === "bid" ? "default" : "destructive"}>
+                            {signal.side === "bid" ? "매수" : "매도"}
+                          </Badge>
+                        </td>
+                        <td className="py-3 px-4">
+                          <code className="px-1 py-0.5 rounded bg-muted font-mono text-sm">
+                            {signal.trigger_condition}
+                          </code>
+                        </td>
+                        <td className="py-3 px-4 text-center text-sm">{formatDate(signal.created_at)}</td>
+                        <td className="py-3 px-4 text-center">
+                          {signal.status === "triggered" ? (
+                            <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                              <Check className="h-3 w-3 mr-1" />
+                              실행됨
+                            </Badge>
+                          ) : signal.status === "pending" ? (
+                            <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">
+                              <Clock className="h-3 w-3 mr-1" />
+                              대기중
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
+                              <X className="h-3 w-3 mr-1" />
+                              만료됨
+                            </Badge>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
+    </AuthGuard>
   )
 }

@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useApi } from "@/lib/ApiContext"
 import { useRouter } from "next/navigation"
 import { useToast } from "@/components/ui/use-toast"
 import { Button } from "@/components/ui/button"
@@ -32,55 +31,31 @@ import {
   TrendingUp,
 } from "lucide-react"
 import { AuthGuard, ApiKeyRequired } from "@/components/common"
-import { getAllStrategies } from "@/app/api/strategy"
+import { useUser } from "@/hooks/queries/useUser"
+import { useCurrentStrategy } from "@/hooks/queries/useCurrentStrategy"
+import { useStrategies } from "@/hooks/queries/useStrategies"
+import { useTradingStatus } from "@/hooks/queries/useTradingStatus"
+import { useUpdateStrategy } from "@/hooks/mutations/useUpdateStrategy"
 import type { Strategy } from "@/types"
 
 export default function StrategiesPage() {
-  const { apiKeyState, tradingStatus, updateStrategy, updateTradingSettings } = useApi()
-  const [strategies, setStrategies] = useState<Strategy[]>([])
-  const [isLoadingStrategies, setIsLoadingStrategies] = useState(true)
+  // React Query hooks
+  const { data: user } = useUser()
+  const currentStrategy = useCurrentStrategy()
+  const { data: strategies = [], isLoading: isLoadingStrategies } = useStrategies()
+  const { data: tradingStatus } = useTradingStatus()
+  const updateStrategyMutation = useUpdateStrategy()
+  
   const [selectedStrategy, setSelectedStrategy] = useState<number | null>(null)
   const [detailStrategy, setDetailStrategy] = useState<Strategy | null>(null)
   const [showDetailDialog, setShowDetailDialog] = useState(false)
   const [showConfirmDialog, setShowConfirmDialog] = useState(false)
   const [settings, setSettings] = useState({
-    stopLossEnabled: tradingStatus.settings?.stopLossEnabled || true,
-    stopLossLimit: tradingStatus.settings?.stopLossLimit || 5,
+    stopLossEnabled: true,
+    stopLossLimit: 5,
   })
   const router = useRouter()
   const { toast } = useToast()
-
-  // 전략 목록 로드
-  useEffect(() => {
-    const loadStrategies = async () => {
-      try {
-        setIsLoadingStrategies(true)
-        const strategiesList = await getAllStrategies()
-        setStrategies(strategiesList)
-      } catch (error) {
-        console.error("Failed to load strategies:", error)
-        toast({
-          variant: "destructive",
-          title: "전략 목록 로드 실패",
-          description: "전략 목록을 불러오는 중 오류가 발생했습니다.",
-        })
-      } finally {
-        setIsLoadingStrategies(false)
-      }
-    }
-
-    loadStrategies()
-  }, [toast])
-
-  // 트레이딩 설정 초기화
-  useEffect(() => {
-    if (tradingStatus.settings) {
-      setSettings({
-        stopLossEnabled: tradingStatus.settings.stopLossEnabled,
-        stopLossLimit: tradingStatus.settings.stopLossLimit,
-      })
-    }
-  }, [tradingStatus.settings])
 
   const handleViewDetail = (strategy: Strategy) => {
     setDetailStrategy(strategy)
@@ -88,7 +63,7 @@ export default function StrategiesPage() {
   }
 
   const handleSelectStrategy = (strategyId: number) => {
-    if (!apiKeyState.hasApiKey) {
+    if (!user?.apiKeyRegistered) {
       toast({
         variant: "destructive",
         title: "API 키가 등록되지 않았습니다",
@@ -109,24 +84,15 @@ export default function StrategiesPage() {
   const handleConfirmStrategy = async () => {
     if (selectedStrategy === null) return
 
-    try {
-      const success = await updateStrategy(selectedStrategy)
-
-      if (success) {
+    updateStrategyMutation.mutate(selectedStrategy, {
+      onSuccess: () => {
         setShowConfirmDialog(false)
-      }
-    } catch (error) {
-      console.error("Failed to update strategy:", error)
-      toast({
-        variant: "destructive",
-        title: "전략 설정 실패",
-        description: "전략 설정 중 오류가 발생했습니다. 다시 시도해주세요.",
-      })
-    }
+      },
+    })
   }
 
   const handleSaveSettings = async () => {
-    if (!apiKeyState.hasApiKey) {
+    if (!user?.apiKeyRegistered) {
       toast({
         variant: "destructive",
         title: "API 키가 등록되지 않았습니다",
@@ -135,7 +101,12 @@ export default function StrategiesPage() {
       return
     }
 
-    await updateTradingSettings(settings)
+    // TODO: 백엔드 API 구현 시 실제 mutation으로 교체
+    console.log("Settings saved:", settings)
+    toast({
+      title: "설정이 저장되었습니다",
+      duration: 3000,
+    })
   }
 
   const getStrategyTypeIcon = (type?: string) => {
@@ -181,8 +152,8 @@ export default function StrategiesPage() {
               <TabsTrigger value="settings">트레이딩 설정</TabsTrigger>
             </TabsList>
 
-                <TabsContent value="strategies" className="space-y-6">
-              {tradingStatus.strategy && (
+            <TabsContent value="strategies" className="space-y-6">
+              {currentStrategy && (
                 <Card className="bg-muted/50">
                   <CardHeader>
                     <CardTitle className="flex items-center">
@@ -194,10 +165,10 @@ export default function StrategiesPage() {
                   <CardContent>
                     <div className="flex items-center">
                       <div className="flex-1">
-                        <h3 className="text-lg font-semibold">{tradingStatus.strategy.name}</h3>
-                        <p className="text-sm text-muted-foreground">{tradingStatus.strategy.information}</p>
+                        <h3 className="text-lg font-semibold">{currentStrategy.name}</h3>
+                        <p className="text-sm text-muted-foreground">{currentStrategy.information}</p>
                       </div>
-                      <Button variant="outline" size="sm" onClick={() => handleViewDetail(tradingStatus.strategy!)}>
+                      <Button variant="outline" size="sm" onClick={() => handleViewDetail(currentStrategy)}>
                         상세 보기
                         <ChevronRight className="ml-1 h-4 w-4" />
                       </Button>
@@ -211,16 +182,16 @@ export default function StrategiesPage() {
                   <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
                 </div>
               ) : (
-                    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                   {strategies.map((strategy) => (
-                    <Card key={strategy.id} className={tradingStatus.strategy?.id === strategy.id ? "border-primary" : ""}>
+                    <Card key={strategy.id} className={currentStrategy?.id === strategy.id ? "border-primary" : ""}>
                       <CardHeader>
                         <div className="flex items-center justify-between">
                           <Badge variant="outline" className="mb-2">
                             {getStrategyTypeIcon(strategy.strategyType)}
                             <span className="ml-1">{getStrategyTypeLabel(strategy.strategyType)}</span>
                           </Badge>
-                          {tradingStatus.strategy?.id === strategy.id && <CheckCircle2 className="h-5 w-5 text-primary" />}
+                          {currentStrategy?.id === strategy.id && <CheckCircle2 className="h-5 w-5 text-primary" />}
                         </div>
                         <CardTitle>{strategy.name}</CardTitle>
                         <CardDescription>{strategy.information}</CardDescription>
@@ -248,9 +219,9 @@ export default function StrategiesPage() {
                         <Button
                           size="sm"
                           onClick={() => handleSelectStrategy(strategy.id)}
-                          disabled={tradingStatus.strategy?.id === strategy.id}
+                          disabled={currentStrategy?.id === strategy.id || updateStrategyMutation.isPending}
                         >
-                          {tradingStatus.strategy?.id === strategy.id ? "현재 사용 중" : "이 전략으로 설정"}
+                          {currentStrategy?.id === strategy.id ? "현재 사용 중" : "이 전략으로 설정"}
                         </Button>
                       </CardFooter>
                     </Card>
@@ -259,7 +230,7 @@ export default function StrategiesPage() {
               )}
             </TabsContent>
 
-                <TabsContent value="settings" className="space-y-4">
+            <TabsContent value="settings" className="space-y-4">
               <Card>
                 <CardHeader>
                   <CardTitle>트레이딩 설정</CardTitle>
@@ -275,7 +246,7 @@ export default function StrategiesPage() {
                       id="stop-loss"
                       checked={settings.stopLossEnabled}
                       onCheckedChange={(checked) => setSettings((prev) => ({ ...prev, stopLossEnabled: checked }))}
-                      disabled={!apiKeyState.hasApiKey}
+                      disabled={!user?.apiKeyRegistered}
                     />
                   </div>
 
@@ -297,7 +268,7 @@ export default function StrategiesPage() {
                             stopLossLimit: Number.parseInt(e.target.value) || 5,
                           }))
                         }
-                        disabled={!apiKeyState.hasApiKey}
+                        disabled={!user?.apiKeyRegistered}
                       />
                       <p className="text-xs text-muted-foreground">
                         일일 손실이 {settings.stopLossLimit}%를 초과하면 자동매매가 중지됩니다.
@@ -305,7 +276,7 @@ export default function StrategiesPage() {
                     </div>
                   )}
 
-                  {!apiKeyState.hasApiKey && (
+                  {!user?.apiKeyRegistered && (
                     <Alert>
                       <AlertCircle className="h-4 w-4" />
                       <AlertTitle>API 키가 필요합니다</AlertTitle>
@@ -314,7 +285,7 @@ export default function StrategiesPage() {
                   )}
                 </CardContent>
                 <CardFooter>
-                  <Button onClick={handleSaveSettings} className="ml-auto" disabled={!apiKeyState.hasApiKey}>
+                  <Button onClick={handleSaveSettings} className="ml-auto" disabled={!user?.apiKeyRegistered}>
                     설정 저장
                   </Button>
                 </CardFooter>
@@ -323,7 +294,7 @@ export default function StrategiesPage() {
           </Tabs>
 
           {/* 전략 상세 정보 다이얼로그 */}
-              <Dialog open={showDetailDialog} onOpenChange={setShowDetailDialog}>
+          <Dialog open={showDetailDialog} onOpenChange={setShowDetailDialog}>
             <DialogContent className="sm:max-w-[500px]">
               <DialogHeader>
                 <DialogTitle>{detailStrategy?.name}</DialogTitle>
@@ -360,9 +331,9 @@ export default function StrategiesPage() {
                     setShowDetailDialog(false)
                     if (detailStrategy) handleSelectStrategy(detailStrategy.id)
                   }}
-                  disabled={tradingStatus.strategy?.id === detailStrategy?.id}
+                  disabled={currentStrategy?.id === detailStrategy?.id || updateStrategyMutation.isPending}
                 >
-                  {tradingStatus.strategy?.id === detailStrategy?.id ? "현재 사용 중" : "이 전략으로 설정"}
+                  {currentStrategy?.id === detailStrategy?.id ? "현재 사용 중" : "이 전략으로 설정"}
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -377,7 +348,7 @@ export default function StrategiesPage() {
               </DialogHeader>
               <div className="py-4">
                 <p className="text-sm">
-                  <strong>현재 전략:</strong> {tradingStatus.strategy?.name || "없음"}
+                  <strong>현재 전략:</strong> {currentStrategy?.name || "없음"}
                 </p>
                 <p className="text-sm mt-2">
                   <strong>변경할 전략:</strong> {strategies.find((s) => s.id === selectedStrategy)?.name}
@@ -394,7 +365,9 @@ export default function StrategiesPage() {
                 <Button variant="outline" onClick={() => setShowConfirmDialog(false)}>
                   취소
                 </Button>
-                <Button onClick={handleConfirmStrategy}>확인</Button>
+                <Button onClick={handleConfirmStrategy} disabled={updateStrategyMutation.isPending}>
+                  {updateStrategyMutation.isPending ? "변경 중..." : "확인"}
+                </Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>

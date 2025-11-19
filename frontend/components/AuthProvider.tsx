@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
+import { useQueryClient } from '@tanstack/react-query'
 import { useToast } from '@/components/ui/use-toast'
 import { getMyInfo } from '@/app/api/member'
 import { reissueAccessToken, logoutApi } from '@/app/api/token'
@@ -39,6 +40,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [isLoading, setIsLoading] = useState<boolean>(true)
   const router = useRouter()
   const { toast } = useToast()
+  const queryClient = useQueryClient()
 
   // 사용자 정보 조회 (재사용 가능한 함수)
   const fetchUserInfo = async (): Promise<void> => {
@@ -136,12 +138,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
     removeAccessToken()
     localStorage.removeItem('refresh_token')
     setUser(null)
+    queryClient.clear()  // ✨ React Query 캐시 모두 제거
 
     toast({
       title: '로그아웃',
       description: '안전하게 로그아웃되었습니다.',
       duration: 3000,
     })
+    
+    // 페이지 새로고침으로 모든 상태 초기화
+    window.location.href = '/'
   }
 
   return (

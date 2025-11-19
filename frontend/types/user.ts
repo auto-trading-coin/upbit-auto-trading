@@ -10,6 +10,7 @@ export interface User {
   tradeActive: boolean
   strategyRegistered: boolean
   apiKeyRegistered: boolean
+  strategyId?: number | null  // ✨ 백엔드에서 받은 strategyId
 }
 
 export interface MemberLoginResponse {
@@ -18,4 +19,5 @@ export interface MemberLoginResponse {
   tradeActive: boolean
   strategyRegistered: boolean
   apiKeyRegistered: boolean
+  strategyId?: number | null  // ✨ 백엔드 응답에 포함
 }

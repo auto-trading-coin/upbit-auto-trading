@@ -1,7 +1,7 @@
 "use client"
 
 import { useRouter } from "next/navigation"
-import { useApi } from "@/lib/ApiContext"
+import { useUser } from "@/hooks/queries/useUser"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Key } from "lucide-react"
@@ -44,11 +44,11 @@ export function ApiKeyRequired({
   description = "이 기능을 이용하기 위해서는 업비트 API 키가 필요합니다.",
   showRegisterButton = true,
 }: ApiKeyRequiredProps) {
-  const { apiKeyState } = useApi()
+  const { data: user } = useUser()
   const router = useRouter()
 
   // API 키가 등록되어 있으면 children 렌더링
-  if (apiKeyState.hasApiKey) {
+  if (user?.apiKeyRegistered) {
     return <>{children}</>
   }
 

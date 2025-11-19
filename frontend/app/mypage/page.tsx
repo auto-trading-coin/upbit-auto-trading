@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useApi } from "@/lib/ApiContext"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -11,69 +10,53 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Switch } from "@/components/ui/switch"
 import { Key, ShieldAlert, ShieldCheck } from "lucide-react"
 import { AuthGuard } from "@/components/common"
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { useUser } from "@/hooks/queries/useUser"
+import { useTradingStatus } from "@/hooks/queries/useTradingStatus"
+import { useRegisterApiKey } from "@/hooks/mutations/useRegisterApiKey"
+import { useDeleteApiKey } from "@/hooks/mutations/useDeleteApiKey"
+
 export default function MyPage() {
-  const { apiKeyState, registerUpbitKey, deleteUpbitKey, tradingStatus, updateTradingSettings } = useApi()
+  // React Query hooks
+  const { data: user } = useUser()
+  const { data: tradingStatus } = useTradingStatus()
+  const registerMutation = useRegisterApiKey()
+  const deleteMutation = useDeleteApiKey()
+  
   const [accessKey, setAccessKey] = useState("")
   const [secretKey, setSecretKey] = useState("")
-  const [stopLossEnabled, setStopLossEnabled] = useState(tradingStatus.settings?.stopLossEnabled || true)
-  const [stopLossLimit, setStopLossLimit] = useState(tradingStatus.settings?.stopLossLimit || 5)
-  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [stopLossEnabled, setStopLossEnabled] = useState(true)
+  const [stopLossLimit, setStopLossLimit] = useState(5)
   const router = useRouter()
-
-  // 설정 값 초기화
-  useEffect(() => {
-    if (tradingStatus.settings) {
-      setStopLossEnabled(tradingStatus.settings.stopLossEnabled)
-      setStopLossLimit(tradingStatus.settings.stopLossLimit)
-    }
-  }, [tradingStatus.settings])
 
   const handleRegisterApiKey = async () => {
     if (!accessKey || !secretKey) {
       return
     }
 
-    setIsSubmitting(true)
-    try {
-      const success = await registerUpbitKey(accessKey, secretKey)
-
-      if (success) {
-        // 폼 초기화
-        setAccessKey("")
-        setSecretKey("")
+    registerMutation.mutate(
+      { accessKey, secretKey },
+      {
+        onSuccess: () => {
+          // 폼 초기화
+          setAccessKey("")
+          setSecretKey("")
+        },
       }
-    } catch (error) {
-      console.error("Failed to register API key:", error)
-    } finally {
-      setIsSubmitting(false)
-    }
+    )
   }
 
   const handleDeleteApiKey = async () => {
-    setIsSubmitting(true)
-    try {
-      await deleteUpbitKey()
-    } catch (error) {
-      console.error("Failed to delete API key:", error)
-    } finally {
-      setIsSubmitting(false)
-    }
+    deleteMutation.mutate()
   }
 
   const handleSaveSettings = async () => {
-    setIsSubmitting(true)
-    try {
-      await updateTradingSettings({
-        stopLossEnabled,
-        stopLossLimit,
-      })
-    } catch (error) {
-      console.error("Failed to save settings:", error)
-    } finally {
-      setIsSubmitting(false)
-    }
+    // TODO: 백엔드 API 구현 시 실제 mutation으로 교체
+    console.log("Settings saved:", { stopLossEnabled, stopLossLimit })
   }
+
+  // API 키 등록/삭제 진행 중 상태
+  const isSubmitting = registerMutation.isPending || deleteMutation.isPending
 
   return (
     <AuthGuard>
@@ -97,7 +80,7 @@ export default function MyPage() {
                 <CardDescription>자동매매를 위한 업비트 API 키를 등록하거나 관리합니다.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                {apiKeyState.hasApiKey ? (
+                {user?.apiKeyRegistered ? (
                   <div className="space-y-4">
                     <Alert className="bg-green-50 border-green-200">
                       <ShieldCheck className="h-4 w-4 text-green-500" />
@@ -110,7 +93,7 @@ export default function MyPage() {
                       <Label htmlFor="registered-access-key">Access Key</Label>
                       <Input
                         id="registered-access-key"
-                        value={apiKeyState.accessKey.substring(0, 8) + "••••••••••••••••"}
+                        value="••••••••••••••••••••••••"
                         disabled
                       />
                     </div>
@@ -121,12 +104,12 @@ export default function MyPage() {
                     <Button
                       variant="destructive"
                       onClick={handleDeleteApiKey}
-                      disabled={isSubmitting || tradingStatus.isRunning}
+                      disabled={isSubmitting || tradingStatus?.isRunning}
                       className="w-full"
                     >
-                      {isSubmitting ? "처리 중..." : "API 키 삭제"}
+                      {deleteMutation.isPending ? "삭제 중..." : "API 키 삭제"}
                     </Button>
-                    {tradingStatus.isRunning && (
+                    {tradingStatus?.isRunning && (
                       <p className="text-xs text-red-500">
                         자동매매가 실행 중일 때는 API 키를 삭제할 수 없습니다. 먼저 자동매매를 중지해주세요.
                       </p>
@@ -165,7 +148,7 @@ export default function MyPage() {
                       disabled={!accessKey || !secretKey || isSubmitting}
                       className="w-full"
                     >
-                      {isSubmitting ? "등록 중..." : "API 키 등록"}
+                      {registerMutation.isPending ? "등록 중..." : "API 키 등록"}
                     </Button>
                   </div>
                 )}
@@ -211,7 +194,7 @@ export default function MyPage() {
                       id="stop-loss"
                       checked={stopLossEnabled}
                       onCheckedChange={setStopLossEnabled}
-                      disabled={!apiKeyState.hasApiKey}
+                      disabled={!user?.apiKeyRegistered}
                     />
                   </div>
                   {stopLossEnabled && (
@@ -225,7 +208,7 @@ export default function MyPage() {
                           max="50"
                           value={stopLossLimit}
                           onChange={(e) => setStopLossLimit(Number(e.target.value))}
-                          disabled={!apiKeyState.hasApiKey}
+                          disabled={!user?.apiKeyRegistered}
                           className="w-24"
                         />
                         <span>%</span>
@@ -240,7 +223,7 @@ export default function MyPage() {
               <CardFooter>
                 <Button
                   onClick={handleSaveSettings}
-                  disabled={!apiKeyState.hasApiKey || isSubmitting}
+                  disabled={!user?.apiKeyRegistered || isSubmitting}
                   className="w-full"
                 >
                   {isSubmitting ? "저장 중..." : "설정 저장"}

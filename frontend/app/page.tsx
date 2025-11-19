@@ -1,8 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useAuth } from '@/components/AuthProvider';
-import { useApi } from '@/lib/ApiContext';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/components/ui/use-toast';
 import { Button } from '@/components/ui/button';
@@ -29,13 +27,24 @@ import {
 } from 'lucide-react';
 import { LoginModal } from '@/components/LoginModal';
 import { StatusBadge } from '@/components/common';
+import { useUser } from '@/hooks/queries/useUser';
+import { useCurrentStrategy } from '@/hooks/queries/useCurrentStrategy';
+import { useTradingStatus } from '@/hooks/queries/useTradingStatus';
+import { useToggleTrading } from '@/hooks/mutations/useToggleTrading';
 
 export default function Dashboard() {
-    const { isAuthenticated, isLoading } = useAuth();
-    const { apiKeyState, tradingStatus, toggleTrading, emergencyStop } = useApi();
+    // React Query hooks
+    const { data: user, isLoading } = useUser();
+    const currentStrategy = useCurrentStrategy();
+    const { data: tradingStatus } = useTradingStatus();
+    const toggleMutation = useToggleTrading();
+
     const [showLoginModal, setShowLoginModal] = useState(false);
     const router = useRouter();
     const { toast } = useToast();
+
+    // 인증 여부
+    const isAuthenticated = !!user;
 
     if (isLoading) {
         return (
@@ -51,7 +60,7 @@ export default function Dashboard() {
             return;
         }
 
-        if (!apiKeyState.hasApiKey) {
+        if (!user.apiKeyRegistered) {
             toast({
                 variant: 'destructive',
                 title: 'API 키가 등록되지 않았습니다',
@@ -65,7 +74,7 @@ export default function Dashboard() {
             return;
         }
 
-        if (!tradingStatus.strategy) {
+        if (!currentStrategy) {
             toast({
                 variant: 'destructive',
                 title: '전략이 선택되지 않았습니다',
@@ -79,24 +88,24 @@ export default function Dashboard() {
             return;
         }
 
-        await toggleTrading();
+        toggleMutation.mutate(!tradingStatus?.isRunning);
     };
 
     const handleRegisterApiKey = () => {
-        // Use shallow routing to prevent full page reload
         router.push('/mypage');
     };
 
     const handleSelectStrategy = () => {
-        // Use shallow routing to prevent full page reload
         router.push('/strategies');
     };
 
     const handleEmergencyStop = async () => {
-        await emergencyStop();
+        if (tradingStatus?.isRunning) {
+            toggleMutation.mutate(false);
+        }
     };
 
-    const canRunTrading = apiKeyState.hasApiKey && tradingStatus.strategy !== null;
+    const canRunTrading = user?.apiKeyRegistered && currentStrategy !== null;
 
     return (
         <div className="space-y-6">
@@ -105,7 +114,7 @@ export default function Dashboard() {
                 <Button
                     onClick={() => router.push('/strategies')}
                     variant="outline"
-                    disabled={!isAuthenticated || !apiKeyState.hasApiKey}
+                    disabled={!isAuthenticated || !user?.apiKeyRegistered}
                 >
                     전략 설정
                 </Button>
@@ -124,7 +133,7 @@ export default function Dashboard() {
                 </Alert>
             )}
 
-            {isAuthenticated && !apiKeyState.hasApiKey && (
+            {isAuthenticated && !user.apiKeyRegistered && (
                 <Card className="border-amber-300 bg-amber-50">
                     <CardHeader>
                         <CardTitle className="flex items-center text-amber-800">
@@ -153,7 +162,7 @@ export default function Dashboard() {
                 </Card>
             )}
 
-            {isAuthenticated && apiKeyState.hasApiKey && !tradingStatus.strategy && (
+            {isAuthenticated && user.apiKeyRegistered && !currentStrategy && (
                 <Card className="border-amber-300 bg-amber-50">
                     <CardHeader>
                         <CardTitle className="flex items-center text-amber-800">
@@ -242,40 +251,39 @@ export default function Dashboard() {
                             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                                 <CardTitle className="text-sm font-medium">자동매매 상태</CardTitle>
                                 <Switch
-                                    checked={apiKeyState.hasApiKey && tradingStatus.isRunning}
+                                    checked={user.apiKeyRegistered && tradingStatus?.isRunning}
                                     onCheckedChange={handleToggleTrading}
-                                    disabled={!isAuthenticated || !canRunTrading}
+                                    disabled={!isAuthenticated || !canRunTrading || toggleMutation.isPending}
                                 />
                             </CardHeader>
                             <CardContent>
                                 <div className="flex items-center space-x-2">
-                                    {!apiKeyState.hasApiKey ? (
+                                    {!user.apiKeyRegistered ? (
                                         <Badge
                                             variant="outline"
                                             className="bg-amber-50 text-amber-700 border-amber-200"
                                         >
                                             API 키 필요
                                         </Badge>
-                                    ) : !tradingStatus.strategy ? (
+                                    ) : !currentStrategy ? (
                                         <Badge
                                             variant="outline"
                                             className="bg-amber-50 text-amber-700 border-amber-200"
                                         >
                                             전략 선택 필요
                                         </Badge>
-                                    ) : tradingStatus.isRunning ? (
+                                    ) : tradingStatus?.isRunning ? (
                                         <StatusBadge status="running" />
                                     ) : (
                                         <StatusBadge status="stopped" />
                                     )}
-                                    {tradingStatus.hasError && <StatusBadge status="error" />}
                                 </div>
                                 <p className="text-xs text-muted-foreground mt-2">
-                                    {!apiKeyState.hasApiKey
+                                    {!user.apiKeyRegistered
                                         ? 'API 키를 등록해주세요'
-                                        : !tradingStatus.strategy
+                                        : !currentStrategy
                                         ? '전략을 선택해주세요'
-                                        : `현재 전략: ${tradingStatus.strategy?.name || '선택된 전략 없음'}`}
+                                        : `현재 전략: ${currentStrategy?.name || '선택된 전략 없음'}`}
                                 </p>
                             </CardContent>
                         </Card>
@@ -286,29 +294,14 @@ export default function Dashboard() {
                                 <Clock className="h-4 w-4 text-muted-foreground" />
                             </CardHeader>
                             <CardContent>
-                                {canRunTrading ? (
-                                    <>
-                                        <div className="text-2xl font-bold">
-                                            {tradingStatus.lastSignal
-                                                ? new Date(tradingStatus.lastSignal).toLocaleTimeString()
-                                                : '-'}
-                                        </div>
-                                        <p className="text-xs text-muted-foreground mt-2">
-                                            {tradingStatus.lastSignal
-                                                ? new Date(tradingStatus.lastSignal).toLocaleDateString()
-                                                : '시그널 없음'}
-                                        </p>
-                                    </>
-                                ) : (
-                                    <>
-                                        <div className="text-2xl font-bold">-</div>
-                                        <p className="text-xs text-muted-foreground mt-2">
-                                            {!apiKeyState.hasApiKey
-                                                ? 'API 키 등록 후 확인 가능'
-                                                : '전략 선택 후 확인 가능'}
-                                        </p>
-                                    </>
-                                )}
+                                <>
+                                    <div className="text-2xl font-bold">-</div>
+                                    <p className="text-xs text-muted-foreground mt-2">
+                                        {!user.apiKeyRegistered
+                                            ? 'API 키 등록 후 확인 가능'
+                                            : '전략 선택 후 확인 가능'}
+                                    </p>
+                                </>
                             </CardContent>
                         </Card>
 
@@ -318,41 +311,14 @@ export default function Dashboard() {
                                 <Percent className="h-4 w-4 text-muted-foreground" />
                             </CardHeader>
                             <CardContent>
-                                {canRunTrading && tradingStatus.dailyProfit !== null ? (
-                                    <>
-                                        <div className="flex items-center">
-                                            <div
-                                                className={`text-2xl font-bold ${
-                                                    tradingStatus.dailyProfit > 0
-                                                        ? 'text-green-500'
-                                                        : tradingStatus.dailyProfit < 0
-                                                        ? 'text-red-500'
-                                                        : ''
-                                                }`}
-                                            >
-                                                {tradingStatus.dailyProfit > 0 ? '+' : ''}
-                                                {tradingStatus.dailyProfit}%
-                                            </div>
-                                            {tradingStatus.dailyProfit > 0 ? (
-                                                <TrendingUp className="ml-2 h-4 w-4 text-green-500" />
-                                            ) : tradingStatus.dailyProfit < 0 ? (
-                                                <TrendingDown className="ml-2 h-4 w-4 text-red-500" />
-                                            ) : (
-                                                <ArrowUpDown className="ml-2 h-4 w-4 text-muted-foreground" />
-                                            )}
-                                        </div>
-                                        <p className="text-xs text-muted-foreground mt-2">오늘의 수익률</p>
-                                    </>
-                                ) : (
-                                    <>
-                                        <div className="text-2xl font-bold">-</div>
-                                        <p className="text-xs text-muted-foreground mt-2">
-                                            {!apiKeyState.hasApiKey
-                                                ? 'API 키 등록 후 확인 가능'
-                                                : '전략 선택 후 확인 가능'}
-                                        </p>
-                                    </>
-                                )}
+                                <>
+                                    <div className="text-2xl font-bold">-</div>
+                                    <p className="text-xs text-muted-foreground mt-2">
+                                        {!user.apiKeyRegistered
+                                            ? 'API 키 등록 후 확인 가능'
+                                            : '전략 선택 후 확인 가능'}
+                                    </p>
+                                </>
                             </CardContent>
                         </Card>
 
@@ -362,23 +328,14 @@ export default function Dashboard() {
                                 <DollarSign className="h-4 w-4 text-muted-foreground" />
                             </CardHeader>
                             <CardContent>
-                                {canRunTrading && tradingStatus.totalAsset !== null ? (
-                                    <>
-                                        <div className="text-2xl font-bold">
-                                            {tradingStatus.totalAsset?.toLocaleString()}원
-                                        </div>
-                                        <p className="text-xs text-muted-foreground mt-2">원화 + 코인 평가금액</p>
-                                    </>
-                                ) : (
-                                    <>
-                                        <div className="text-2xl font-bold">-</div>
-                                        <p className="text-xs text-muted-foreground mt-2">
-                                            {!apiKeyState.hasApiKey
-                                                ? 'API 키 등록 후 확인 가능'
-                                                : '전략 선택 후 확인 가능'}
-                                        </p>
-                                    </>
-                                )}
+                                <>
+                                    <div className="text-2xl font-bold">-</div>
+                                    <p className="text-xs text-muted-foreground mt-2">
+                                        {!user.apiKeyRegistered
+                                            ? 'API 키 등록 후 확인 가능'
+                                            : '전략 선택 후 확인 가능'}
+                                    </p>
+                                </>
                             </CardContent>
                         </Card>
                     </div>
@@ -395,77 +352,32 @@ export default function Dashboard() {
                                     <CardDescription>현재 보유 중인 코인 포지션 정보</CardDescription>
                                 </CardHeader>
                                 <CardContent>
-                                    {canRunTrading && tradingStatus.positions && tradingStatus.positions.length > 0 ? (
-                                        <div className="rounded-md border">
-                                            <div className="grid grid-cols-5 gap-4 p-4 font-medium">
-                                                <div>마켓</div>
-                                                <div>수량</div>
-                                                <div>매수 평균가</div>
-                                                <div>현재가</div>
-                                                <div>수익률</div>
-                                            </div>
-                                            {tradingStatus.positions.map((position, index) => {
-                                                const profitPercent =
-                                                    ((position.currentPrice - position.avgPrice) / position.avgPrice) *
-                                                    100;
-                                                return (
-                                                    <div key={index} className="grid grid-cols-5 gap-4 p-4 border-t">
-                                                        <div>{position.market}</div>
-                                                        <div>{position.amount}</div>
-                                                        <div>{position.avgPrice.toLocaleString()}원</div>
-                                                        <div>{position.currentPrice.toLocaleString()}원</div>
-                                                        <div
-                                                            className={
-                                                                profitPercent > 0
-                                                                    ? 'text-green-500'
-                                                                    : profitPercent < 0
-                                                                    ? 'text-red-500'
-                                                                    : ''
-                                                            }
-                                                        >
-                                                            {profitPercent > 0 ? '+' : ''}
-                                                            {profitPercent.toFixed(2)}%
-                                                        </div>
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
-                                    ) : (
-                                        <div className="flex flex-col items-center justify-center py-8 text-center">
-                                            <LineChart className="h-10 w-10 text-muted-foreground mb-4" />
-                                            <h3 className="text-lg font-medium">
-                                                {!apiKeyState.hasApiKey
-                                                    ? 'API 키 등록 후 확인 가능합니다'
-                                                    : !tradingStatus.strategy
-                                                    ? '전략 선택 후 확인 가능합니다'
-                                                    : '보유 중인 포지션이 없습니다'}
-                                            </h3>
-                                            <p className="text-sm text-muted-foreground mt-1">
-                                                {!apiKeyState.hasApiKey
-                                                    ? '업비트 API 키를 등록하여 포지션 정보를 확인하세요'
-                                                    : !tradingStatus.strategy
-                                                    ? '자동매매 전략을 선택하여 포지션 정보를 확인하세요'
-                                                    : '자동매매가 시작되면 이곳에 포지션 정보가 표시됩니다'}
-                                            </p>
-                                            {!apiKeyState.hasApiKey ? (
-                                                <Button
-                                                    variant="outline"
-                                                    className="mt-4"
-                                                    onClick={handleRegisterApiKey}
-                                                >
-                                                    API 키 등록하기
-                                                </Button>
-                                            ) : !tradingStatus.strategy ? (
-                                                <Button
-                                                    variant="outline"
-                                                    className="mt-4"
-                                                    onClick={handleSelectStrategy}
-                                                >
-                                                    전략 선택하기
-                                                </Button>
-                                            ) : null}
-                                        </div>
-                                    )}
+                                    <div className="flex flex-col items-center justify-center py-8 text-center">
+                                        <LineChart className="h-10 w-10 text-muted-foreground mb-4" />
+                                        <h3 className="text-lg font-medium">
+                                            {!user.apiKeyRegistered
+                                                ? 'API 키 등록 후 확인 가능합니다'
+                                                : !currentStrategy
+                                                ? '전략 선택 후 확인 가능합니다'
+                                                : '보유 중인 포지션이 없습니다'}
+                                        </h3>
+                                        <p className="text-sm text-muted-foreground mt-1">
+                                            {!user.apiKeyRegistered
+                                                ? '업비트 API 키를 등록하여 포지션 정보를 확인하세요'
+                                                : !currentStrategy
+                                                ? '자동매매 전략을 선택하여 포지션 정보를 확인하세요'
+                                                : '자동매매가 시작되면 이곳에 포지션 정보가 표시됩니다'}
+                                        </p>
+                                        {!user.apiKeyRegistered ? (
+                                            <Button variant="outline" className="mt-4" onClick={handleRegisterApiKey}>
+                                                API 키 등록하기
+                                            </Button>
+                                        ) : !currentStrategy ? (
+                                            <Button variant="outline" className="mt-4" onClick={handleSelectStrategy}>
+                                                전략 선택하기
+                                            </Button>
+                                        ) : null}
+                                    </div>
                                 </CardContent>
                             </Card>
                         </TabsContent>
@@ -480,7 +392,7 @@ export default function Dashboard() {
                                         <div className="grid grid-cols-2 gap-4">
                                             <div className="flex items-center space-x-2">
                                                 <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted">
-                                                    {apiKeyState.hasApiKey ? (
+                                                    {user.apiKeyRegistered ? (
                                                         <CheckCircle2 className="h-4 w-4 text-green-500" />
                                                     ) : (
                                                         <AlertTriangle className="h-4 w-4 text-amber-500" />
@@ -489,13 +401,13 @@ export default function Dashboard() {
                                                 <div>
                                                     <p className="text-sm font-medium">API 키 상태</p>
                                                     <p className="text-xs text-muted-foreground">
-                                                        {apiKeyState.hasApiKey ? '등록됨' : '미등록'}
+                                                        {user.apiKeyRegistered ? '등록됨' : '미등록'}
                                                     </p>
                                                 </div>
                                             </div>
                                             <div className="flex items-center space-x-2">
                                                 <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted">
-                                                    {tradingStatus.strategy ? (
+                                                    {currentStrategy ? (
                                                         <CheckCircle2 className="h-4 w-4 text-green-500" />
                                                     ) : (
                                                         <AlertTriangle className="h-4 w-4 text-amber-500" />
@@ -504,15 +416,13 @@ export default function Dashboard() {
                                                 <div>
                                                     <p className="text-sm font-medium">전략 상태</p>
                                                     <p className="text-xs text-muted-foreground">
-                                                        {tradingStatus.strategy
-                                                            ? tradingStatus.strategy.name
-                                                            : '미선택'}
+                                                        {currentStrategy ? currentStrategy.name : '미선택'}
                                                     </p>
                                                 </div>
                                             </div>
                                             <div className="flex items-center space-x-2">
                                                 <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted">
-                                                    {tradingStatus.isRunning ? (
+                                                    {tradingStatus?.isRunning ? (
                                                         <CheckCircle2 className="h-4 w-4 text-green-500" />
                                                     ) : (
                                                         <StopCircle className="h-4 w-4 text-amber-500" />
@@ -523,7 +433,7 @@ export default function Dashboard() {
                                                     <p className="text-xs text-muted-foreground">
                                                         {!canRunTrading
                                                             ? '실행 불가'
-                                                            : tradingStatus.isRunning
+                                                            : tradingStatus?.isRunning
                                                             ? '실행 중'
                                                             : '중지됨'}
                                                     </p>
@@ -531,29 +441,21 @@ export default function Dashboard() {
                                             </div>
                                             <div className="flex items-center space-x-2">
                                                 <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted">
-                                                    {tradingStatus.settings?.stopLossEnabled ? (
-                                                        <CheckCircle2 className="h-4 w-4 text-green-500" />
-                                                    ) : (
-                                                        <AlertTriangle className="h-4 w-4 text-amber-500" />
-                                                    )}
+                                                    <CheckCircle2 className="h-4 w-4 text-green-500" />
                                                 </div>
                                                 <div>
                                                     <p className="text-sm font-medium">손실 제한</p>
-                                                    <p className="text-xs text-muted-foreground">
-                                                        {tradingStatus.settings?.stopLossEnabled
-                                                            ? `${tradingStatus.settings.stopLossLimit}% 제한`
-                                                            : '비활성화'}
-                                                    </p>
+                                                    <p className="text-xs text-muted-foreground">5% 제한</p>
                                                 </div>
                                             </div>
                                         </div>
 
-                                        {!apiKeyState.hasApiKey ? (
+                                        {!user.apiKeyRegistered ? (
                                             <Button onClick={handleRegisterApiKey} className="w-full">
                                                 <Key className="mr-2 h-4 w-4" />
                                                 API 키 등록하기
                                             </Button>
-                                        ) : !tradingStatus.strategy ? (
+                                        ) : !currentStrategy ? (
                                             <Button onClick={handleSelectStrategy} className="w-full">
                                                 <Settings className="mr-2 h-4 w-4" />
                                                 전략 선택하기
@@ -562,7 +464,7 @@ export default function Dashboard() {
                                             <Button
                                                 variant="destructive"
                                                 className="w-full"
-                                                disabled={!tradingStatus.isRunning}
+                                                disabled={!tradingStatus?.isRunning || toggleMutation.isPending}
                                                 onClick={handleEmergencyStop}
                                             >
                                                 <StopCircle className="mr-2 h-4 w-4" />
