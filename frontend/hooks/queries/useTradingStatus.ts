@@ -42,6 +42,6 @@ export const useTradingStatus = () => {
     },
     enabled: !!user,  // user가 로드된 후에만 실행
     staleTime: 5000,  // 5초
-    refetchInterval: 5000,  // 5초마다 자동 갱신
+    // ✨ refetchInterval 제거: Optimistic Update로 즉시 반영되므로 불필요
   })
 }
