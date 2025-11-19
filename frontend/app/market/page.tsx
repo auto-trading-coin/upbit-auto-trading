@@ -1,15 +1,19 @@
 "use client"
 
-import { useMemo } from "react"
+import { useMemo, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { ArrowDown, ArrowUp, ExternalLink, Search, TrendingUp, TrendingDown, Minus } from "lucide-react"
+import { ArrowDown, ArrowUp, ArrowUpDown, ExternalLink, Search, TrendingUp, TrendingDown, Minus, Languages } from "lucide-react"
 import { useMarkets } from "@/hooks/queries/useMarkets"
 import { useFilterStore } from "@/stores"
 import { LoadingSpinner } from "@/components/common"
 import type { MarketData } from "@/types"
+
+type SortKey = 'name' | 'price' | 'changeRate' | 'changePrice' | 'tradePrice' | 'tradeVolume'
+type SortOrder = 'asc' | 'desc'
 
 export default function MarketPage() {
   // React Query로 실시간 시세 조회 (WebSocket 자동 연결)
@@ -17,6 +21,30 @@ export default function MarketPage() {
   
   // Zustand 필터 상태
   const { market: filter, setMarketSearch } = useFilterStore()
+  
+  // 정렬 상태
+  const [sortKey, setSortKey] = useState<SortKey>('tradePrice') // 기본: 거래대금 순
+  const [sortOrder, setSortOrder] = useState<SortOrder>('desc') // 기본: 내림차순
+  
+  // 코인명 표시 형식 (한글/영문)
+  const [showKoreanName, setShowKoreanName] = useState(true)
+  
+  // 정렬 핸들러
+  const handleSort = (key: SortKey) => {
+    if (sortKey === key) {
+      // 같은 컬럼 클릭 시 정렬 방향 변경
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')
+    } else {
+      // 다른 컬럼 클릭 시 해당 컬럼으로 정렬 (내림차순 기본)
+      setSortKey(key)
+      setSortOrder('desc')
+    }
+  }
+  
+  // 코인명 토글
+  const handleToggleName = () => {
+    setShowKoreanName(!showKoreanName)
+  }
   
   // 검색 필터링
   const filteredMarkets = useMemo(() => {
@@ -31,15 +59,64 @@ export default function MarketPage() {
     )
   }, [markets, filter.searchTerm])
   
-  // 탭별 필터링
+  // 정렬 적용
+  const sortedMarkets = useMemo(() => {
+    const sorted = [...filteredMarkets]
+    
+    sorted.sort((a, b) => {
+      let compareA: number | string = 0
+      let compareB: number | string = 0
+      
+      switch (sortKey) {
+        case 'name':
+          compareA = showKoreanName ? a.koreanName : a.englishName
+          compareB = showKoreanName ? b.koreanName : b.englishName
+          break
+        case 'price':
+          compareA = a.currentPrice
+          compareB = b.currentPrice
+          break
+        case 'changeRate':
+          compareA = a.changeRate
+          compareB = b.changeRate
+          break
+        case 'changePrice':
+          compareA = a.changePrice
+          compareB = b.changePrice
+          break
+        case 'tradePrice':
+          compareA = a.accTradePrice24h
+          compareB = b.accTradePrice24h
+          break
+        case 'tradeVolume':
+          compareA = a.accTradeVolume24h
+          compareB = b.accTradeVolume24h
+          break
+      }
+      
+      if (typeof compareA === 'string' && typeof compareB === 'string') {
+        return sortOrder === 'asc' 
+          ? compareA.localeCompare(compareB, 'ko')
+          : compareB.localeCompare(compareA, 'ko')
+      }
+      
+      return sortOrder === 'asc' 
+        ? (compareA as number) - (compareB as number)
+        : (compareB as number) - (compareA as number)
+    })
+    
+    return sorted
+  }, [filteredMarkets, sortKey, sortOrder, showKoreanName])
+  
+  // 탭별 필터링 (정렬된 데이터 기준)
   const riseMarkets = useMemo(() => 
-    filteredMarkets.filter(m => m.change === 'RISE'),
-    [filteredMarkets]
+    sortedMarkets.filter(m => m.change === 'RISE'),
+    [sortedMarkets]
   )
   
   const fallMarkets = useMemo(() => 
-    filteredMarkets.filter(m => m.change === 'FALL'),
-    [filteredMarkets]
+    sortedMarkets.filter(m => m.change === 'FALL'),
+    [sortedMarkets]
   )
   
   const handleCoinClick = (market: string) => {
@@ -48,12 +125,12 @@ export default function MarketPage() {
   }
 
   const formatPrice = (price: number) => {
-    if (price >= 1000000) {
-      return `${(price / 1000000).toLocaleString(undefined, { maximumFractionDigits: 2 })}백만`
-    } else if (price >= 1000) {
-      return `${(price / 1000).toLocaleString(undefined, { maximumFractionDigits: 2 })}천`
+    if (price >= 100000000) {
+      return `${(price / 100000000).toLocaleString(undefined, { maximumFractionDigits: 2 })}억원`
+    } else if (price >= 10000) {
+      return `${(price / 10000).toLocaleString(undefined, { maximumFractionDigits: 2 })}만원`
     }
-    return price.toLocaleString()
+    return `${price.toLocaleString()}원`
   }
 
   const formatVolume = (volume: number) => {
@@ -77,6 +154,16 @@ export default function MarketPage() {
         return <Minus className="h-4 w-4 text-gray-500" />
     }
   }
+  
+  // 정렬 아이콘 렌더링
+  const renderSortIcon = (key: SortKey) => {
+    if (sortKey !== key) {
+      return <ArrowUpDown className="h-3 w-3 ml-1 text-muted-foreground" />
+    }
+    return sortOrder === 'asc' 
+      ? <ArrowUp className="h-3 w-3 ml-1" />
+      : <ArrowDown className="h-3 w-3 ml-1" />
+  }
 
   const renderMarketList = (data: MarketData[]) => {
     if (data.length === 0) {
@@ -89,15 +176,66 @@ export default function MarketPage() {
 
     return (
       <div className="rounded-md border">
+        {/* 테이블 헤더 */}
         <div className="grid grid-cols-7 gap-4 p-4 font-medium text-sm bg-muted/50">
-          <div>코인명</div>
-          <div className="text-right">현재가</div>
-          <div className="text-right">변동률</div>
-          <div className="text-right">변동가</div>
-          <div className="text-right">거래대금(24h)</div>
-          <div className="text-right">거래량(24h)</div>
+          <div 
+            className={`flex items-center cursor-pointer hover:text-primary transition-colors ${
+              sortKey === 'name' ? 'text-primary font-semibold' : ''
+            }`}
+            onClick={() => handleSort('name')}
+          >
+            코인명
+            {renderSortIcon('name')}
+          </div>
+          <div 
+            className={`text-right flex items-center justify-end cursor-pointer hover:text-primary transition-colors ${
+              sortKey === 'price' ? 'text-primary font-semibold' : ''
+            }`}
+            onClick={() => handleSort('price')}
+          >
+            현재가
+            {renderSortIcon('price')}
+          </div>
+          <div 
+            className={`text-right flex items-center justify-end cursor-pointer hover:text-primary transition-colors ${
+              sortKey === 'changeRate' ? 'text-primary font-semibold' : ''
+            }`}
+            onClick={() => handleSort('changeRate')}
+          >
+            변동률
+            {renderSortIcon('changeRate')}
+          </div>
+          <div 
+            className={`text-right flex items-center justify-end cursor-pointer hover:text-primary transition-colors ${
+              sortKey === 'changePrice' ? 'text-primary font-semibold' : ''
+            }`}
+            onClick={() => handleSort('changePrice')}
+          >
+            변동가
+            {renderSortIcon('changePrice')}
+          </div>
+          <div 
+            className={`text-right flex items-center justify-end cursor-pointer hover:text-primary transition-colors ${
+              sortKey === 'tradePrice' ? 'text-primary font-semibold' : ''
+            }`}
+            onClick={() => handleSort('tradePrice')}
+          >
+            거래대금(24h)
+            {renderSortIcon('tradePrice')}
+          </div>
+          <div 
+            className={`text-right flex items-center justify-end cursor-pointer hover:text-primary transition-colors ${
+              sortKey === 'tradeVolume' ? 'text-primary font-semibold' : ''
+            }`}
+            onClick={() => handleSort('tradeVolume')}
+          >
+            거래량(24h)
+            {renderSortIcon('tradeVolume')}
+          </div>
           <div className="text-center">차트</div>
         </div>
+        
+        {/* 테이블 바디 */}
         {data.map((item) => (
           <div
             key={item.market}
@@ -105,7 +243,9 @@ export default function MarketPage() {
             onClick={() => handleCoinClick(item.market)}
           >
             <div className="flex flex-col">
-              <span className="font-medium">{item.koreanName}</span>
+              <span className="font-medium">
+                {showKoreanName ? item.koreanName : item.englishName}
+              </span>
               <span className="text-xs text-muted-foreground">{item.market}</span>
             </div>
             <div
@@ -130,7 +270,7 @@ export default function MarketPage() {
                     : ""
                 }
               >
-                {item.changeRate.toFixed(2)}%
+                {item.changeRate > 0 ? '+' : ''}{item.changeRate.toFixed(2)}%
               </span>
             </div>
             <div
@@ -145,7 +285,7 @@ export default function MarketPage() {
               {item.changePrice > 0 ? '+' : ''}{item.changePrice.toLocaleString()}
             </div>
             <div className="text-right text-sm">
-              {formatPrice(item.accTradePrice24h)}원
+              {formatPrice(item.accTradePrice24h)}
             </div>
             <div className="text-right text-sm">
               {formatVolume(item.accTradeVolume24h)}
@@ -189,12 +329,21 @@ export default function MarketPage() {
           onChange={(e) => setMarketSearch(e.target.value)}
           className="max-w-sm"
         />
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleToggleName}
+          className="flex items-center gap-2"
+        >
+          <Languages className="h-4 w-4" />
+          {showKoreanName ? "한글명" : "영문명"}
+        </Button>
       </div>
 
       <Tabs defaultValue="all" className="w-full">
         <TabsList>
           <TabsTrigger value="all">
-            전체 ({filteredMarkets.length})
+            전체 ({sortedMarkets.length})
           </TabsTrigger>
           <TabsTrigger value="rise" className="text-red-500">
             <TrendingUp className="h-4 w-4 mr-1" />
@@ -211,11 +360,11 @@ export default function MarketPage() {
             <CardHeader>
               <CardTitle>전체 코인 시세</CardTitle>
               <CardDescription>
-                실시간 코인 가격, 변동률, 거래량 정보 (총 {filteredMarkets.length}개)
+                실시간 코인 가격, 변동률, 거래량 정보 (총 {sortedMarkets.length}개)
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {renderMarketList(filteredMarkets)}
+              {renderMarketList(sortedMarkets)}
             </CardContent>
           </Card>
         </TabsContent>

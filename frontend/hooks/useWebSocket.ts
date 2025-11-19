@@ -135,37 +135,50 @@ export const useWebSocket = () => {
         
         if (data.type !== 'ticker') return
         
-        // MarketData 형식으로 변환
-        const marketData: MarketData = {
-          market: data.code,
-          koreanName: data.code.split('-')[1], // WebSocket에는 한글명이 없으므로 임시
-          englishName: data.code.split('-')[1],
-          currentPrice: data.trade_price,
-          change: data.change as ChangeType,
-          changeRate: data.change_rate * 100,
-          changePrice: data.change_price,
-          accTradePrice24h: data.acc_trade_price_24h,
-          accTradeVolume24h: data.acc_trade_volume_24h,
-        }
-        
         // React Query 캐시 직접 업데이트
-        // 1. 개별 마켓 캐시 업데이트
-        queryClient.setQueryData(
-          queryKeys.markets.detail(data.code),
-          marketData
-        )
-        
-        // 2. 마켓 목록 캐시 업데이트
+        // 1. 마켓 목록 캐시 업데이트 (한글명/영문명 유지)
         queryClient.setQueryData(
           queryKeys.markets.list(),
           (oldData: MarketData[] | undefined) => {
             if (!oldData) return oldData
             
-            return oldData.map(item =>
-              item.market === data.code ? marketData : item
-            )
+            return oldData.map(item => {
+              if (item.market === data.code) {
+                // ✨ 기존 데이터를 유지하면서 가격 관련 데이터만 업데이트
+                return {
+                  ...item,  // 한글명/영문명 유지
+                  currentPrice: data.trade_price,
+                  change: data.change as ChangeType,
+                  changeRate: data.change_rate * 100,
+                  changePrice: data.change_price,
+                  accTradePrice24h: data.acc_trade_price_24h,
+                  accTradeVolume24h: data.acc_trade_volume_24h,
+                }
+              }
+              return item
+            })
           }
         )
+        
+        // 2. 개별 마켓 캐시 업데이트 (있는 경우에만)
+        const existingDetail = queryClient.getQueryData<MarketData>(
+          queryKeys.markets.detail(data.code)
+        )
+        
+        if (existingDetail) {
+          queryClient.setQueryData(
+            queryKeys.markets.detail(data.code),
+            {
+              ...existingDetail,  // 한글명/영문명 유지
+              currentPrice: data.trade_price,
+              change: data.change as ChangeType,
+              changeRate: data.change_rate * 100,
+              changePrice: data.change_price,
+              accTradePrice24h: data.acc_trade_price_24h,
+              accTradeVolume24h: data.acc_trade_volume_24h,
+            }
+          )
+        }
       } catch (error) {
         console.error('[WebSocket] Parse error:', error)
       }
