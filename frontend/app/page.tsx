@@ -30,13 +30,17 @@ import { StatusBadge } from '@/components/common';
 import { useUser } from '@/hooks/queries/useUser';
 import { useCurrentStrategy } from '@/hooks/queries/useCurrentStrategy';
 import { useTradingStatus } from '@/hooks/queries/useTradingStatus';
+import { usePortfolio } from '@/hooks/queries/usePortfolio';
 import { useToggleTrading } from '@/hooks/mutations/useToggleTrading';
+import { useMarkets } from '@/hooks/queries/useMarkets';
 
 export default function Dashboard() {
     // React Query hooks
     const { data: user, isLoading } = useUser();
     const currentStrategy = useCurrentStrategy();
     const { data: tradingStatus } = useTradingStatus();
+    const { data: holdings, isLoading: portfolioLoading } = usePortfolio();
+    const { data: markets = [] } = useMarkets();
     const toggleMutation = useToggleTrading();
 
     const [showLoginModal, setShowLoginModal] = useState(false);
@@ -352,32 +356,145 @@ export default function Dashboard() {
                                     <CardDescription>현재 보유 중인 코인 포지션 정보</CardDescription>
                                 </CardHeader>
                                 <CardContent>
-                                    <div className="flex flex-col items-center justify-center py-8 text-center">
-                                        <LineChart className="h-10 w-10 text-muted-foreground mb-4" />
-                                        <h3 className="text-lg font-medium">
-                                            {!user.apiKeyRegistered
-                                                ? 'API 키 등록 후 확인 가능합니다'
-                                                : !currentStrategy
-                                                ? '전략 선택 후 확인 가능합니다'
-                                                : '보유 중인 포지션이 없습니다'}
-                                        </h3>
-                                        <p className="text-sm text-muted-foreground mt-1">
-                                            {!user.apiKeyRegistered
-                                                ? '업비트 API 키를 등록하여 포지션 정보를 확인하세요'
-                                                : !currentStrategy
-                                                ? '자동매매 전략을 선택하여 포지션 정보를 확인하세요'
-                                                : '자동매매가 시작되면 이곳에 포지션 정보가 표시됩니다'}
-                                        </p>
-                                        {!user.apiKeyRegistered ? (
+                                    {!user?.apiKeyRegistered ? (
+                                        <div className="flex flex-col items-center justify-center py-8 text-center">
+                                            <LineChart className="h-10 w-10 text-muted-foreground mb-4" />
+                                            <h3 className="text-lg font-medium">API 키 등록 후 확인 가능합니다</h3>
+                                            <p className="text-sm text-muted-foreground mt-1">
+                                                업비트 API 키를 등록하여 포지션 정보를 확인하세요
+                                            </p>
                                             <Button variant="outline" className="mt-4" onClick={handleRegisterApiKey}>
                                                 API 키 등록하기
                                             </Button>
-                                        ) : !currentStrategy ? (
-                                            <Button variant="outline" className="mt-4" onClick={handleSelectStrategy}>
-                                                전략 선택하기
-                                            </Button>
-                                        ) : null}
-                                    </div>
+                                        </div>
+                                    ) : portfolioLoading ? (
+                                        <div className="flex items-center justify-center py-8">
+                                            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
+                                        </div>
+                                    ) : !holdings || holdings.length === 0 ? (
+                                        <div className="flex flex-col items-center justify-center py-8 text-center">
+                                            <LineChart className="h-10 w-10 text-muted-foreground mb-4" />
+                                            <h3 className="text-lg font-medium">보유 중인 포지션이 없습니다</h3>
+                                            <p className="text-sm text-muted-foreground mt-1">
+                                                자동매매가 시작되면 이곳에 포지션 정보가 표시됩니다
+                                            </p>
+                                        </div>
+                                    ) : (
+                                        <div className="rounded-md border">
+                                            {/* 테이블 헤더 */}
+                                            <div className="grid grid-cols-6 gap-4 p-4 font-medium text-sm bg-muted/50 border-b">
+                                                <div>코인명</div>
+                                                <div className="text-right">보유량</div>
+                                                <div className="text-right">평균 매수가</div>
+                                                <div className="text-right">현재가</div>
+                                                <div className="text-right">평가금액</div>
+                                                <div className="text-right">수익률</div>
+                                            </div>
+
+                                            {/* 테이블 바디 */}
+                                            {holdings.map((holding) => {
+                                                // 실시간 가격 및 한글명 가져오기
+                                                const marketData = markets.find(m => m.market === holding.market)
+                                                const currentPrice = marketData?.currentPrice || holding.currentPrice
+                                                const koreanName = marketData?.koreanName || holding.koreanName
+                                                
+                                                // 계산
+                                                const evaluationAmount = holding.amount * currentPrice
+                                                const profitAmount = holding.amount * (currentPrice - holding.avgBuyPrice)
+                                                const profitRate = ((currentPrice - holding.avgBuyPrice) / holding.avgBuyPrice) * 100
+                                                
+                                                const isProfit = profitAmount >= 0
+                                                const colorClass = isProfit ? 'text-red-500' : 'text-blue-500'
+                                                
+                                                return (
+                                                    <div
+                                                        key={holding.market}
+                                                        className="grid grid-cols-6 gap-4 p-4 border-b last:border-0 hover:bg-muted/50 transition-colors"
+                                                    >
+                                                        <div className="flex flex-col">
+                                                            <span className="font-medium">
+                                                                {koreanName}
+                                                            </span>
+                                                            <span className="text-xs text-muted-foreground">
+                                                                {holding.market}
+                                                            </span>
+                                                        </div>
+                                                        <div className="text-right">
+                                                            <div className="font-medium">
+                                                                {holding.amount.toLocaleString(undefined, {
+                                                                    maximumFractionDigits: 8,
+                                                                })}
+                                                            </div>
+                                                        </div>
+                                                        <div className="text-right">
+                                                            <div className="font-medium">
+                                                                {holding.avgBuyPrice.toLocaleString()}원
+                                                            </div>
+                                                        </div>
+                                                        <div className={`text-right font-medium ${colorClass}`}>
+                                                            {currentPrice.toLocaleString()}원
+                                                        </div>
+                                                        <div className="text-right">
+                                                            <div className="font-medium">
+                                                                {evaluationAmount.toLocaleString(undefined, {
+                                                                    maximumFractionDigits: 0,
+                                                                })}원
+                                                            </div>
+                                                        </div>
+                                                        <div className="text-right">
+                                                            <div className={`font-bold ${colorClass}`}>
+                                                                {isProfit ? '+' : ''}
+                                                                {profitRate.toFixed(2)}%
+                                                            </div>
+                                                            <div className={`text-sm ${colorClass}`}>
+                                                                {isProfit ? '+' : ''}
+                                                                {profitAmount.toLocaleString(undefined, {
+                                                                    maximumFractionDigits: 0,
+                                                                })}원
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                )
+                                            })}
+
+                                            {/* 합계 */}
+                                            <div className="grid grid-cols-6 gap-4 p-4 bg-muted/30 font-semibold">
+                                                <div>합계</div>
+                                                <div className="text-right">-</div>
+                                                <div className="text-right">-</div>
+                                                <div className="text-right">-</div>
+                                                <div className="text-right">
+                                                    {holdings
+                                                        .reduce((sum, holding) => {
+                                                            const marketData = markets.find(m => m.market === holding.market)
+                                                            const currentPrice = marketData?.currentPrice || holding.currentPrice
+                                                            return sum + (holding.amount * currentPrice)
+                                                        }, 0)
+                                                        .toLocaleString(undefined, { maximumFractionDigits: 0 })}원
+                                                </div>
+                                                <div className={`text-right ${
+                                                    holdings.reduce((sum, holding) => {
+                                                        const marketData = markets.find(m => m.market === holding.market)
+                                                        const currentPrice = marketData?.currentPrice || holding.currentPrice
+                                                        return sum + (holding.amount * (currentPrice - holding.avgBuyPrice))
+                                                    }, 0) >= 0 ? 'text-red-500' : 'text-blue-500'
+                                                }`}>
+                                                    {holdings.reduce((sum, holding) => {
+                                                        const marketData = markets.find(m => m.market === holding.market)
+                                                        const currentPrice = marketData?.currentPrice || holding.currentPrice
+                                                        return sum + (holding.amount * (currentPrice - holding.avgBuyPrice))
+                                                    }, 0) >= 0 ? '+' : ''}
+                                                    {holdings
+                                                        .reduce((sum, holding) => {
+                                                            const marketData = markets.find(m => m.market === holding.market)
+                                                            const currentPrice = marketData?.currentPrice || holding.currentPrice
+                                                            return sum + (holding.amount * (currentPrice - holding.avgBuyPrice))
+                                                        }, 0)
+                                                        .toLocaleString(undefined, { maximumFractionDigits: 0 })}원
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
                                 </CardContent>
                             </Card>
                         </TabsContent>
