@@ -5,6 +5,8 @@ import com.autric.upbit.domain.member.dto.response.MemberTradeActiveResponse;
 import com.autric.upbit.domain.strategy.dto.request.StrategyUpdateRequest;
 import com.autric.upbit.domain.strategy.entity.Strategy;
 import com.autric.upbit.domain.strategy.repository.StrategyRepository;
+import com.autric.upbit.domain.upbitApiKey.UpbitApiKey;
+import com.autric.upbit.domain.upbitApiKey.UpbitApiKeyRepository;
 import com.autric.upbit.external.upbit.dto.request.UpbitAuthRequest;
 import com.autric.upbit.global.response.code.ErrorCode;
 import com.autric.upbit.domain.member.entity.Member;
@@ -23,6 +25,7 @@ public class MemberService {
 
     private final MemberRepository memberRepository;
     private final StrategyRepository strategyRepository;
+    private final UpbitApiKeyRepository upbitApiKeyRepository;
 
     public MemberLoginResponse getLoginData(CustomOAuth2User user){
         Member member = user.getMember();
@@ -36,11 +39,10 @@ public class MemberService {
 
         // member 객체를 JPA 영속 상태로 만들기 위해 DB 조회
         Member member = memberRepository.findById(memberId).orElseThrow(
-                ()-> new BusinessException(ErrorCode.MEMBER_NOT_FOUND)
-        );
+                () -> new BusinessException(ErrorCode.MEMBER_NOT_FOUND));
 
         // 자동매매를 실행했지만, 업비트 api키가 등록되지 않은 상태
-        if(status && member.getAccessKey() == null) {
+        if (status && !member.hasApiKey()) {
             throw new BusinessException(ErrorCode.UPBIT_API_KEY_NOT_FOUND);
         }
 
@@ -51,36 +53,38 @@ public class MemberService {
 
     @Transactional
     public void registerUpbitApiKey(CustomOAuth2User user, UpbitAuthRequest dto) {
-        String accessKey = dto.getAccessKey();
-        String secretKey = dto.getSecretKey();
-
         // accessKey 중복 검사
-        if (memberRepository.existsByAccessKey(accessKey)) {
+        if (upbitApiKeyRepository.existsByAccessKey(dto.getAccessKey())) {
             throw new BusinessException(ErrorCode.DUPLICATE_UPBIT_API_KEY);
         }
 
         Member member = memberRepository.findById(user.getMember().getId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.MEMBER_NOT_FOUND));
 
-        // 키 저장
-        // JPA 더티체킹으로 자동 DB 반영
-        member.setUpbitApiKey(accessKey, secretKey);  // 암호화 예정
+        if (member.getUpbitApiKey() != null) {
+            throw new BusinessException(ErrorCode.DUPLICATE_UPBIT_API_KEY);
+        }
+
+        UpbitApiKey apiKey = dto.toUpbitApiKeyEntity(member);
+
+        member.registerUpbitApiKey(apiKey);
+        upbitApiKeyRepository.save(apiKey);
     }
 
     @Transactional
-    public void deleteUpbitApiKey(CustomOAuth2User user){
+    public void deleteUpbitApiKey(CustomOAuth2User user) {
         Member member = memberRepository.findById(user.getMember().getId())
-                .orElseThrow(()-> new BusinessException(ErrorCode.MEMBER_NOT_FOUND));
+                .orElseThrow(() -> new BusinessException(ErrorCode.MEMBER_NOT_FOUND));
 
         // 자동매매가 실행 중인 경우 예외 처리
-        if(member.getTradeActive()) {
+        if (member.getTradeActive()) {
             throw new BusinessException(ErrorCode.API_KEY_DELETE_CONFLICT);
         }
         member.deleteUpbitApiKey();
     }
 
     @Transactional
-    public void updateStrategy(CustomOAuth2User user, StrategyUpdateRequest dto){
+    public void updateStrategy(CustomOAuth2User user, StrategyUpdateRequest dto) {
         Long id = dto.getStrategyId();
         // 존재하지 않는 유저
         Member member = memberRepository.findById(user.getMember().getId())
@@ -89,7 +93,6 @@ public class MemberService {
         // 존재하지 않는 전략
         Strategy strategy = strategyRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(ErrorCode.STRATEGY_NOT_FOUND));
-
 
         member.updateStrategy(strategy);
     }

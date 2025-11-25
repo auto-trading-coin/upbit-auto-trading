@@ -28,7 +28,6 @@ public enum ErrorCode implements ResponseCode {
         Member
      */
     MEMBER_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 사용자입니다."),
-    API_KEY_DELETE_CONFLICT(HttpStatus.CONFLICT, "자동매매가 활성화된 상태에서는 API 키를 삭제할 수 없습니다."),
 
     /*
         Token
@@ -41,8 +40,10 @@ public enum ErrorCode implements ResponseCode {
         Upbit
      */
     INVALID_UPBIT_API_KEY(HttpStatus.BAD_REQUEST, "유효하지 않은 업비트 API KEY 입니다"),
-    DUPLICATE_UPBIT_API_KEY(HttpStatus.BAD_REQUEST, "중복된 API KEY 입니다."),
     UPBIT_API_KEY_NOT_FOUND(HttpStatus.NOT_FOUND, "업비트 API KEY가 등록되지 않았습니다."),
+    API_KEY_DELETE_CONFLICT(HttpStatus.CONFLICT, "자동매매가 활성화된 상태에서는 API 키를 삭제할 수 없습니다."),
+    DUPLICATE_UPBIT_API_KEY(HttpStatus.CONFLICT, "이미 등록된 Upbit API KEY가 존재합니다."),
+
 
     /*
         Strategy
