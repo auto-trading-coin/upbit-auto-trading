@@ -13,6 +13,7 @@ import com.autric.upbit.domain.member.entity.Member;
 import com.autric.upbit.domain.member.repository.MemberRepository;
 import com.autric.upbit.global.response.exception.BusinessException;
 import com.autric.upbit.global.security.oauth2.CustomOAuth2User;
+import com.autric.upbit.global.util.HashUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -53,8 +54,9 @@ public class MemberService {
 
     @Transactional
     public void registerUpbitApiKey(CustomOAuth2User user, UpbitAuthRequest dto) {
-        // accessKey 중복 검사
-        if (upbitApiKeyRepository.existsByAccessKey(dto.getAccessKey())) {
+        String accessKeyHash = HashUtil.sha256(dto.getAccessKey());
+        // accessKey 중복 검사 (해쉬값으로 중복 확인)
+        if (upbitApiKeyRepository.existsByAccessKeyHash(accessKeyHash)){
             throw new BusinessException(ErrorCode.DUPLICATE_UPBIT_API_KEY);
         }
 

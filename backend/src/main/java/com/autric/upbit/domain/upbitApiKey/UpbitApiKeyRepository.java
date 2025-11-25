@@ -7,8 +7,8 @@ import java.util.Optional;
 
 @Repository
 public interface UpbitApiKeyRepository extends JpaRepository<UpbitApiKey, Long> {
-    
-    boolean existsByAccessKey(String accessKey);
-    
+
+    boolean existsByAccessKeyHash(String accessKeyHash);
+
     Optional<UpbitApiKey> findByMemberId(Long memberId);
 }
