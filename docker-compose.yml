@@ -21,6 +21,7 @@ services:
             KAFKA_GROUP_ID: ${KAFKA_GROUP_ID}
             KAKAO_CLIENT_ID: ${KAKAO_CLIENT_ID}
             KAKAO_CLIENT_SECRET: ${KAKAO_CLIENT_SECRET}
+            CRYPTO_SECRET_KEY: ${CRYPTO_SECRET_KEY}
 
         expose:
             - "8080"
