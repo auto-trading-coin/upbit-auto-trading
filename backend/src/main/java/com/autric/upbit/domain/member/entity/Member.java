@@ -1,6 +1,7 @@
 package com.autric.upbit.domain.member.entity;
 
 import com.autric.upbit.domain.strategy.entity.Strategy;
+import com.autric.upbit.domain.upbitApiKey.UpbitApiKey;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -59,41 +60,27 @@ public class Member {
     private Boolean tradeActive;
 
     /**
-     * 업비트 API accessKey
+     * 업비트 API 키
      */
-    @Column(name = "access_key")
-    private String accessKey;
-
-    /**
-     * 업비트 API secretKey
-     */
-    @Column(name = "secret_key")
-    private String secretKey;
+    @OneToOne(mappedBy = "member", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @ToString.Exclude
+    private UpbitApiKey upbitApiKey;
 
     @Builder
-    public Member(Strategy strategy, String email, String nickname, String provider, Long providerId, Boolean tradeActive, String accessKey, String secretKey) {
+    public Member(Strategy strategy, String email, String nickname, String provider, Long providerId,
+            Boolean tradeActive) {
         this.strategy = strategy;
         this.email = email;
         this.nickname = nickname;
         this.provider = provider;
         this.providerId = providerId;
         this.tradeActive = tradeActive;
-        this.accessKey = accessKey;
-        this.secretKey = secretKey;
-    }
-
-    /**
-     * 업비트 API키 등록 여부를 확인하는 편의 메서드
-    */
-    public boolean hasApiKey(){
-        return accessKey != null && !accessKey.isBlank()
-                && secretKey != null && !secretKey.isBlank();
     }
 
     /**
      * 매매 전략 설정 여부를 확인하는 편의 메서드
      */
-    public boolean hasStrategy(){
+    public boolean hasStrategy() {
         return strategy != null;
     }
 
@@ -105,25 +92,34 @@ public class Member {
     }
 
     /**
-     * 업비트 API KEY를 등록하는 편의 메서드
+     * 업비트 API키 등록 여부를 확인하는 편의 메서드
      */
-    public void setUpbitApiKey(String accessKey, String secretKey){
-        this.accessKey = accessKey;
-        this.secretKey = secretKey;
+    public boolean hasApiKey() {
+        return upbitApiKey != null;
+    }
+
+    /**
+     * 업비트 API 키 연관관계 설정
+     */
+    public void registerUpbitApiKey(UpbitApiKey apiKey) {
+        this.upbitApiKey = apiKey;
+        apiKey.changeMember(this);
     }
 
     /**
      * 업비트 API KEY를 삭제하는 편의 메서드
      */
-    public void deleteUpbitApiKey(){
-        this.accessKey = null;
-        this.secretKey = null;
+    public void deleteUpbitApiKey() {
+        if (this.upbitApiKey != null) {
+            this.upbitApiKey.changeMember(null);
+            this.upbitApiKey = null;
+        }
     }
 
     /**
      * 매매 전략을 변경하는 편의 메서드
      */
-    public void updateStrategy(Strategy strategy){
+    public void updateStrategy(Strategy strategy) {
         this.strategy = strategy;
     }
 }

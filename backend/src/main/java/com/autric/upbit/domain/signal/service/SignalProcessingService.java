@@ -8,6 +8,7 @@ import com.autric.upbit.domain.order.service.OrderService;
 import com.autric.upbit.domain.signal.entity.Signals;
 import com.autric.upbit.domain.strategy.entity.Strategy;
 import com.autric.upbit.domain.strategy.service.StrategyService;
+import com.autric.upbit.domain.upbitApiKey.UpbitApiKey;
 import com.autric.upbit.external.kafka.dto.SignalMessage;
 import com.autric.upbit.external.upbit.client.UpbitApiClient;
 import com.autric.upbit.external.upbit.dto.response.UpbitAccountResponse;
@@ -47,30 +48,33 @@ public class SignalProcessingService {
         Signals signal = signalService.createSignal(msg, market, strategy);
 
         for (Member m : members) {
-            List<UpbitAccountResponse> accounts = upbitApiClient.getAccounts(m.getAccessKey(), m.getSecretKey());
-
-            String price = upbitOrderCalculatorService.getPrice(accounts);
-            String volume = upbitOrderCalculatorService.getVolume(accounts, msg.getMarket());
-
-            // 주문 자산이 부족(5천원 미만)하거나, 매도 수량이 부족할 경우 continue
-            if((msg.getSide().equals("bid") && price == null) ||
-                    (msg.getSide().equals("ask") && volume == null)) continue;
+            UpbitApiKey apiKey = m.getUpbitApiKey();
+            if (apiKey == null) {
+                log.warn("Member {} has no API key", m.getId());
+                continue;
+            }
 
             try {
+                List<UpbitAccountResponse> accounts = upbitApiClient.getAccounts(apiKey.getAccessKey(), apiKey.getSecretKey());
+
+                String price = upbitOrderCalculatorService.getPrice(accounts);
+                String volume = upbitOrderCalculatorService.getVolume(accounts, msg.getMarket());
+
+                // 주문 자산이 부족(5천원 미만)하거나, 매도 수량이 부족할 경우 continue
+                if ((msg.getSide().equals("bid") && price == null) ||
+                        (msg.getSide().equals("ask") && volume == null)) continue;
+
                 UpbitOrderResponse res = upbitApiClient.upbitOrder(
-                        m.getAccessKey(), m.getSecretKey(), msg.getMarket(),
+                        apiKey.getAccessKey(), apiKey.getSecretKey(), msg.getMarket(),
                         msg.getSide(), price, volume);
                 log.info("Member {} trade success: market={}, executed_volume={}, price={}, uuid={}, ordType={}",
                         m.getId(), res.getMarket(), res.getExecutedVolume(), res.getPrice(), res.getUuid(), res.getOrdType());
 
-                // 주문 결과 저장
                 orderService.createOrder(res.toOrderEntity(market, m, signal));
 
-            }
-            catch (Exception e){
+            } catch (Exception e) {
                 log.error("Member {} market buy FAILED: {}", m.getId(), e.getMessage(), e);
                 throw e;
-                // TODO: 실패 저장/재시도 정책
             }
 
         }
