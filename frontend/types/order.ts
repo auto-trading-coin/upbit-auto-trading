@@ -15,15 +15,18 @@ export interface Order {
   id: number
   market: string          // Market 엔티티의 market 코드 (예: "KRW-BTC")
   side: OrderSide         // 주문 방향 (bid: 매수, ask: 매도)
-  ordType: OrderType      // 주문 유형
+  price: number           // 주문가
   volume: number          // 주문 수량
-  price: number | null    // 주문가 (시장가의 경우 null)
-  status: OrderStatus     // 주문 상태
-  uuid?: string           // 업비트 주문 UUID (주문 성공 시)
-  errorMessage?: string   // 주문 실패 시 오류 메시지
+  totalAmount: number     // 총 주문 금액 (price * volume)
   createdAt: string       // 생성일시 (ISO string)
-  updatedAt: string       // 수정일시 (ISO string)
   relatedSignalId?: number // 관련 시그널 ID
+
+  // Optional fields (might be used in other contexts or detail view)
+  status?: OrderStatus    // 주문 상태
+  ordType?: OrderType     // 주문 유형
+  uuid?: string           // 업비트 주문 UUID
+  errorMessage?: string   // 주문 실패 시 오류 메시지
+  updatedAt?: string      // 수정일시
 }
 
 /**
@@ -32,10 +35,9 @@ export interface Order {
  */
 export interface Signal {
   id: number
-  strategyId: number      // 전략 ID
-  strategyName: string    // 전략 이름 (조회 시 편의를 위해)
+  strategy: string        // 전략 이름
   market: string          // Market 엔티티의 market 코드
   side: OrderSide         // 매매 방향
   createdAt: string       // 생성일시 (ISO string)
-  relatedOrderId?: number // 관련 주문 ID (시그널이 실행되어 주문이 생성된 경우)
+  relatedOrderId?: number // 관련 주문 ID
 }

@@ -15,7 +15,7 @@ import org.springframework.http.HttpStatus;
 public enum ErrorCode implements ResponseCode {
 
     /*
-        Common
+     * Common
      */
     INVALID_PARAMETER(HttpStatus.BAD_REQUEST, "유효하지 않은 파라미터입니다."),
     UNAUTHORIZED_REQUEST(HttpStatus.UNAUTHORIZED, "인증되지 않은 사용자입니다."),
@@ -25,41 +25,44 @@ public enum ErrorCode implements ResponseCode {
     INVALID_REQUEST(HttpStatus.BAD_REQUEST, "잘못된 요청입니다."),
 
     /*
-        Member
+     * Member
      */
     MEMBER_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 사용자입니다."),
 
     /*
-        Token
+     * Token
      */
     EXPIRED_TOKEN(HttpStatus.UNAUTHORIZED, "토큰이 만료 되었습니다."),
     INVALID_TOKEN(HttpStatus.BAD_REQUEST, "잘못된 토큰입니다."),
     UNSUPPORTED_TOKEN(HttpStatus.FORBIDDEN, "잘못된 토큰입니다."),
 
     /*
-        Upbit
+     * Upbit
      */
     INVALID_UPBIT_API_KEY(HttpStatus.BAD_REQUEST, "유효하지 않은 업비트 API KEY 입니다"),
     UPBIT_API_KEY_NOT_FOUND(HttpStatus.NOT_FOUND, "업비트 API KEY가 등록되지 않았습니다."),
     API_KEY_DELETE_CONFLICT(HttpStatus.CONFLICT, "자동매매가 활성화된 상태에서는 API 키를 삭제할 수 없습니다."),
     DUPLICATE_UPBIT_API_KEY(HttpStatus.CONFLICT, "이미 등록된 Upbit API KEY가 존재합니다."),
 
-
     /*
-        Strategy
+     * Strategy
      */
     STRATEGY_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 전략입니다."),
 
-
     /*
-        Market
+     * Market
      */
     MARKET_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 페어입니다."),
 
     /*
-        Signals
+     * Signals
      */
-    SIGNAL_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 시그널입니다.");
+    SIGNAL_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 시그널입니다."),
+
+    /*
+     * Orders
+     */
+    ORDER_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 주문입니다.");
 
     private final HttpStatus httpStatus;
     private final String message;

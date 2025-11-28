@@ -1,42 +1,41 @@
 /**
  * Order API Client
- * 주문 관련 API 호출 (백엔드 구현 후 추가 예정)
+ * 주문 관련 API 호출
  */
 
 import api from './api'
 import type { Order, Signal, SuccessResponse } from '@/types'
 
-/**
- * 주문 내역 조회 (추후 구현)
- * GET /orders?page=1&size=20
- */
-export const getOrders = async (page: number = 1, size: number = 20): Promise<Order[]> => {
-  const { data } = await api.get<SuccessResponse<Order[]>>(`/orders?page=${page}&size=${size}`)
-  return data.data || []
+interface OrderListResponse {
+  orders: Order[]
+  totalPages: number
+  totalElements: number
+  currentPage: number
+  pageSize: number
+  hasMore: boolean
 }
 
 /**
- * 주문 취소 (추후 구현)
- * DELETE /orders/{orderId}
+ * 주문 내역 조회
+ * GET /order?page=0&size=10
  */
-export const cancelOrder = async (orderId: string): Promise<void> => {
-  await api.delete<SuccessResponse>(`/orders/${orderId}`)
+export const getOrders = async (page: number = 0, size: number = 10): Promise<OrderListResponse> => {
+  const { data } = await api.get<SuccessResponse<OrderListResponse>>(`/order?page=${page}&size=${size}`)
+  return data.data || {
+    orders: [],
+    totalPages: 0,
+    totalElements: 0,
+    currentPage: page,
+    pageSize: size,
+    hasMore: false
+  }
 }
 
 /**
- * 시그널 로그 조회 (추후 구현)
- * GET /signals?page=1&size=20
+ * 주문과 관련된 시그널 조회
+ * GET /order/{orderId}/signal
  */
-export const getSignals = async (page: number = 1, size: number = 20): Promise<Signal[]> => {
-  const { data } = await api.get<SuccessResponse<Signal[]>>(`/signals?page=${page}&size=${size}`)
-  return data.data || []
-}
-
-/**
- * 주문과 관련된 시그널 조회 (추후 구현)
- * GET /signals/order/{orderId}
- */
-export const getSignalsByOrderId = async (orderId: string): Promise<Signal[]> => {
-  const { data } = await api.get<SuccessResponse<Signal[]>>(`/signals/order/${orderId}`)
-  return data.data || []
+export const getSignalByOrderId = async (orderId: number): Promise<Signal> => {
+  const { data } = await api.get<SuccessResponse<Signal>>(`/order/${orderId}/signal`)
+  return data.data!
 }

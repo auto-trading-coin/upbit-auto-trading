@@ -1,6 +1,9 @@
 package com.autric.upbit.domain.signal.service;
 
 import com.autric.upbit.domain.chart.entity.Market;
+import com.autric.upbit.domain.order.entity.Orders;
+import com.autric.upbit.domain.order.repository.OrderRepository;
+import com.autric.upbit.domain.signal.dto.response.SignalResponse;
 import com.autric.upbit.domain.signal.entity.Signals;
 import com.autric.upbit.domain.signal.repository.SignalRepository;
 import com.autric.upbit.domain.strategy.entity.Strategy;
@@ -12,14 +15,17 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+
 @Service
 @Slf4j
 @RequiredArgsConstructor
 public class SignalService {
 
     private final SignalRepository signalRepository;
+    private final OrderRepository orderRepository;
 
-    public Signals getSignal(Long id){
+    public Signals getSignal(Long id) {
         return signalRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(ErrorCode.SIGNAL_NOT_FOUND));
     }
@@ -27,5 +33,25 @@ public class SignalService {
     @Transactional
     public Signals createSignal(SignalMessage msg, Market market, Strategy strategy) {
         return signalRepository.save(msg.toSignalEntity(market, strategy));
+    }
+
+    /**
+     * 시그널 목록 조회 (ID 리스트)
+     */
+    @Transactional(readOnly = true)
+    public List<SignalResponse> getSignalsByIds(List<Long> signalIds) {
+        List<Signals> signals = signalRepository.findByIdInWithDetails(signalIds);
+
+        return signals.stream()
+                .map(signal -> {
+                    SignalResponse response = SignalResponse.fromEntity(signal);
+                    // 관련 주문 ID 찾기
+                    List<Orders> orders = orderRepository.findBySignalId(signal.getId());
+                    if (!orders.isEmpty()) {
+                        response.setRelatedOrderId(orders.get(0).getId());
+                    }
+                    return response;
+                })
+                .toList();
     }
 }
