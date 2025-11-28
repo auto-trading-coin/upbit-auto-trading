@@ -9,12 +9,12 @@ import type { MarketData, ChangeType } from '@/types'
 import type { SuccessResponse } from '@/types'
 
 /**
- * 백엔드 마켓 정보 응답 타입
+ * 백엔드 마켓 정보 응답 타입 (스네이크 케이스)
  */
 interface MarketInfoResponse {
   market: string
-  koreanName: string
-  englishName: string
+  korean_name: string
+  english_name: string
 }
 
 /**
@@ -29,8 +29,8 @@ export const getMarketList = async (): Promise<MarketData[]> => {
     // 가격 정보는 WebSocket에서 채워지므로 초기값 설정
     return markets.map(info => ({
       market: info.market,
-      koreanName: info.koreanName,
-      englishName: info.englishName,
+      koreanName: info.korean_name,
+      englishName: info.english_name,
       currentPrice: 0,
       change: 'EVEN' as ChangeType,
       changeRate: 0,

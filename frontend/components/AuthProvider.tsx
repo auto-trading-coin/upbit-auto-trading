@@ -85,10 +85,17 @@ export function AuthProvider({ children }: AuthProviderProps) {
             await fetchUserInfo()
           }
         } else {
-          // accessToken이 없으면 /token으로 발급 후 /member/me 조회
-          const newAccessToken = await reissueAccessToken()
-          if (isMounted && newAccessToken) {
-            await fetchUserInfo()
+          // accessToken이 없으면 /token으로 발급 시도
+          try {
+            const newAccessToken = await reissueAccessToken()
+            if (isMounted && newAccessToken) {
+              await fetchUserInfo()
+            }
+          } catch (error) {
+            // 재발급 실패 = 비로그인 상태 (정상적인 상황)
+            if (isMounted) {
+              setUser(null)
+            }
           }
         }
       } catch (error) {
