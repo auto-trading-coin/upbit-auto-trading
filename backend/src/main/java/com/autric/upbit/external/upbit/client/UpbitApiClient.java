@@ -1,10 +1,7 @@
 package com.autric.upbit.external.upbit.client;
 
 import com.autric.upbit.domain.chart.entity.Market;
-import com.autric.upbit.external.upbit.dto.response.UpbitAccountResponse;
-import com.autric.upbit.external.upbit.dto.response.UpbitCandleResponse;
-import com.autric.upbit.external.upbit.dto.response.UpbitOrderResponse;
-import com.autric.upbit.external.upbit.dto.response.UpbitTradePriceResponse;
+import com.autric.upbit.external.upbit.dto.response.*;
 import com.autric.upbit.external.upbit.util.UpbitUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -181,6 +178,24 @@ public class UpbitApiClient {
             log.error("Upbit order FAILED (non-HTTP): {}", e.getMessage(), e);
             throw e;
         }
+    }
+
+    /**
+     * 전체 마켓 목록 조회 (KRW 마켓만)
+     *
+     * @return KRW 마켓 정보 리스트
+     */
+    public List<UpbitMarketInfoResponse> getMarkets() {
+        return upbitWebClient.get()
+                .uri(uriBuilder -> uriBuilder
+                        .path("/v1/market/all")
+                        .queryParam("isDetails", true)
+                        .build())
+                .retrieve()
+                .bodyToFlux(UpbitMarketInfoResponse.class)
+                .filter(market -> market.getMarket().startsWith("KRW-"))
+                .collectList()
+                .block();
     }
 
     public UpbitTradePriceResponse getCurrentPrice(String marketCode) {

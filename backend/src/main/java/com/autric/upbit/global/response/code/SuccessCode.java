@@ -6,7 +6,6 @@ import org.springframework.http.HttpStatus;
 
 /**
  * API 성공 응답에 대한 코드 집합
- *
  * 각 항목은 HTTP 상태 코드와 사용자 메시지를 포함
  * 모든 성공 응답은 이 enum을 기준으로 응답 생성
  */
@@ -38,7 +37,7 @@ public enum SuccessCode implements ResponseCode {
         Upbit
      */
     REGISTER_UPBIT_API_KEY_SUCCESS(HttpStatus.CREATED, "업비트 API KEY 등록에 성공했습니다."),
-
+    UPBIT_MARKETS_SUCCESS(HttpStatus.OK, "업비트 Market 정보 조회에 성공했습니다."),
     /*
         Upbit
      */
