@@ -14,7 +14,7 @@ import org.springframework.http.HttpStatus;
 public enum SuccessCode implements ResponseCode {
 
     /*
-        MEMBER
+     * MEMBER
      */
     LOGIN_SUCCESS(HttpStatus.OK, "로그인에 성공했습니다."),
     LOGOUT_SUCCESS(HttpStatus.OK, "로그아웃에 성공했습니다."),
@@ -23,25 +23,36 @@ public enum SuccessCode implements ResponseCode {
     DELETE_UPBIT_API_KEY_SUCCESS(HttpStatus.OK, "업비트 API KEY 삭제에 성공했습니다."),
 
     /*
-        STRATEGY
-    */
+     * STRATEGY
+     */
     STRATEGIES_INFO_SUCCESS(HttpStatus.OK, "전략 목록 조회에 성공했습니다."),
     STRATEGY_DETAIL_INFO_SUCCESS(HttpStatus.OK, "전략 상세 조회에 성공했습니다."),
 
     /*
-        TOKEN
+     * TOKEN
      */
     TOKEN_REISSUE_SUCCESS(HttpStatus.CREATED, "토큰 재발급에 성공했습니다."),
 
     /*
-        Upbit
+     * Upbit
      */
     REGISTER_UPBIT_API_KEY_SUCCESS(HttpStatus.CREATED, "업비트 API KEY 등록에 성공했습니다."),
     UPBIT_MARKETS_SUCCESS(HttpStatus.OK, "업비트 Market 정보 조회에 성공했습니다."),
     /*
-        Upbit
+     * Strategy
      */
-    UPDATE_STRATEGY_SUCCESS(HttpStatus.OK, "자동매매 전략 변경에 성공했습니다.");
+    UPDATE_STRATEGY_SUCCESS(HttpStatus.OK, "자동매매 전략 변경에 성공했습니다."),
+
+    /*
+     * Orders
+     */
+    ORDER_LIST_SUCCESS(HttpStatus.OK, "주문 목록 조회에 성공했습니다."),
+
+    /*
+     * Signals
+     */
+    SIGNAL_LIST_SUCCESS(HttpStatus.OK, "시그널 목록 조회에 성공했습니다."),
+    SIGNAL_DETAIL_SUCCESS(HttpStatus.OK, "시그널 조회에 성공했습니다.");
 
     private final HttpStatus httpStatus;
     private final String message;

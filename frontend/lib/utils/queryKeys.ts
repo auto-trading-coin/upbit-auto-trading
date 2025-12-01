@@ -49,8 +49,8 @@ export const queryKeys = {
   // 시그널 로그
   signals: {
     all: ['signals'] as const,
-    list: () => [...queryKeys.signals.all, 'list'] as const,
-    byOrder: (orderId: string) => [...queryKeys.signals.all, 'order', orderId] as const,
+    list: (page: number) => [...queryKeys.signals.all, 'list', page] as const,
+    byOrder: (orderId: number) => [...queryKeys.signals.all, 'order', orderId] as const,
   },
 
   // 전략 목록

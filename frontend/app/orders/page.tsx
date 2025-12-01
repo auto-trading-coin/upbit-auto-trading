@@ -1,234 +1,172 @@
 "use client"
 
-import { useState, useEffect, useRef, useCallback } from "react"
+import { useState, useRef, useCallback, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { AlertTriangle, Check, Clock, Key, Loader2, X, Zap } from "lucide-react"
+import { AlertTriangle, Loader2, Key, Zap, Check, Clock, X } from "lucide-react"
 import { AuthGuard } from "@/components/common"
 import { useUser } from "@/hooks/queries/useUser"
+import { useOrders } from "@/hooks/queries/useOrders"
+import { useRelatedSignal } from "@/hooks/queries/useRelatedSignals"
+import { useSignals } from "@/hooks/queries/useSignals"
+import { Order, Signal } from "@/types"
 
-// 타입 정의
-interface Order {
-  id: string
-  market: string
-  side: "bid" | "ask"
-  price: number
-  volume: number
-  created_at: string
-  status: "wait" | "done" | "cancel"
-  related_signal_id?: string
-}
 
-interface Signal {
-  id: string
-  strategy: string
-  market: string
-  side: "bid" | "ask"
-  trigger_condition: string
-  created_at: string
-  status: "triggered" | "pending" | "expired"
-  related_order_id?: string
-}
-
-// 더미 데이터 생성 함수
-const generateDummyOrders = (count: number): Order[] => {
-  const markets = ["BTC-KRW", "ETH-KRW", "XRP-KRW", "SOL-KRW", "ADA-KRW"]
-  const sides: ("bid" | "ask")[] = ["bid", "ask"]
-  const statuses: ("wait" | "done" | "cancel")[] = ["wait", "done", "cancel"]
-
-  const now = new Date()
-
-  return Array.from({ length: count }).map((_, index) => {
-    const market = markets[Math.floor(Math.random() * markets.length)]
-    const side = sides[Math.floor(Math.random() * sides.length)]
-    const status = statuses[Math.floor(Math.random() * statuses.length)]
-    const price = Math.floor(Math.random() * 50000000) + 1000000
-    const volume = Number((Math.random() * 2).toFixed(4))
-
-    // 생성 시간을 최근 7일 내로 랜덤하게 설정
-    const createdAt = new Date(now)
-    createdAt.setDate(now.getDate() - Math.floor(Math.random() * 7))
-    createdAt.setHours(Math.floor(Math.random() * 24))
-    createdAt.setMinutes(Math.floor(Math.random() * 60))
-
-    const has_related_signal = Math.random() > 0.7 // 30% 확률로 관련 시그널 있음
-
-    return {
-      id: `ORDER${(index + 1).toString().padStart(6, "0")}`,
-      market,
-      side,
-      price,
-      volume,
-      created_at: createdAt.toISOString(),
-      status,
-      related_signal_id: has_related_signal
-        ? `SIGNAL${(Math.floor(Math.random() * 100) + 1).toString().padStart(6, "0")}`
-        : undefined,
-    }
-  })
-}
-
-// 더미 시그널 데이터 생성 함수
-const generateDummySignals = (count: number): Signal[] => {
-  const markets = ["BTC-KRW", "ETH-KRW", "XRP-KRW", "SOL-KRW", "ADA-KRW"]
-  const sides: ("bid" | "ask")[] = ["bid", "ask"]
-  const statuses: ("triggered" | "pending" | "expired")[] = ["triggered", "pending", "expired"]
-  const strategies = ["이동평균 돌파", "RSI 과매수/과매도", "볼린저밴드 돌파", "MACD 크로스", "가격 돌파"]
-
-  const now = new Date()
-
-  return Array.from({ length: count }).map((_, index) => {
-    const market = markets[Math.floor(Math.random() * markets.length)]
-    const side = sides[Math.floor(Math.random() * sides.length)]
-    const status = statuses[Math.floor(Math.random() * statuses.length)]
-    const strategy = strategies[Math.floor(Math.random() * strategies.length)]
-
-    // 생성 시간을 최근 7일 내로 랜덤하게 설정
-    const createdAt = new Date(now)
-    createdAt.setDate(now.getDate() - Math.floor(Math.random() * 7))
-    createdAt.setHours(Math.floor(Math.random() * 24))
-    createdAt.setMinutes(Math.floor(Math.random() * 60))
-
-    // 트리거 조건 생성
-    let triggerCondition = ""
-    if (strategy === "이동평균 돌파") {
-      triggerCondition = `price > MA${[20, 50, 100, 200][Math.floor(Math.random() * 4)]}`
-    } else if (strategy === "RSI 과매수/과매도") {
-      triggerCondition = `RSI${[7, 14][Math.floor(Math.random() * 2)]} ${side === "bid" ? "<" : ">"} ${side === "bid" ? 30 : 70}`
-    } else if (strategy === "볼린저밴드 돌파") {
-      triggerCondition = `price ${side === "bid" ? "<" : ">"} BB_${side === "bid" ? "LOWER" : "UPPER"}`
-    } else if (strategy === "MACD 크로스") {
-      triggerCondition = `MACD_LINE ${side === "bid" ? ">" : "<"} SIGNAL_LINE`
-    } else {
-      triggerCondition = `price ${side === "bid" ? "<" : ">"} ${Math.floor(Math.random() * 50000000) + 1000000}`
-    }
-
-    const has_related_order = status === "triggered" && Math.random() > 0.5
-
-    return {
-      id: `SIGNAL${(index + 1).toString().padStart(6, "0")}`,
-      strategy,
-      market,
-      side,
-      trigger_condition: triggerCondition,
-      created_at: createdAt.toISOString(),
-      status,
-      related_order_id: has_related_order
-        ? `ORDER${(Math.floor(Math.random() * 100) + 1).toString().padStart(6, "0")}`
-        : undefined,
-    }
-  })
-}
-
-// 초기 더미 데이터
-const INITIAL_ORDERS = generateDummyOrders(20)
-const INITIAL_SIGNALS = generateDummySignals(20)
-
-// 추가 데이터 로드 크기
-const LOAD_MORE_SIZE = 10
 
 export default function OrdersPage() {
-  // React Query hooks
+  const router = useRouter()
   const { data: user } = useUser()
-  
+
+  // 주문 무한스크롤 상태
+  const [currentPage, setCurrentPage] = useState(0)
+  const [allOrders, setAllOrders] = useState<Order[]>([])
+  const [hasMoreOrders, setHasMoreOrders] = useState(true)
+  const [isLoadingMoreOrders, setIsLoadingMoreOrders] = useState(false)
+
+  // 현재 페이지 주문 데이터 조회
+  const { data: orderData, isLoading: isLoadingOrders } = useOrders({ page: currentPage, size: 10 })
+
   const [activeTab, setActiveTab] = useState<string>("orders")
-  const [orders, setOrders] = useState<Order[]>(INITIAL_ORDERS)
-  const [signals, setSignals] = useState<Signal[]>(INITIAL_SIGNALS)
-  const [isLoadingMoreOrders, setIsLoadingMoreOrders] = useState<boolean>(false)
-  const [isLoadingMoreSignals, setIsLoadingMoreSignals] = useState<boolean>(false)
-  const [hasMoreOrders, setHasMoreOrders] = useState<boolean>(true)
-  const [hasMoreSignals, setHasMoreSignals] = useState<boolean>(true)
-  const [selectedSignals, setSelectedSignals] = useState<Signal[]>([])
+
+  // 시그널 무한스크롤 상태
+  const [currentSignalPage, setCurrentSignalPage] = useState(0)
+  const [allSignals, setAllSignals] = useState<Signal[]>([])
+  const [hasMoreSignals, setHasMoreSignals] = useState(true)
+  const [isLoadingMoreSignals, setIsLoadingMoreSignals] = useState(false)
+
+  // 현재 페이지 시그널 데이터 조회
+  const { data: signalData, isLoading: isLoadingSignals } = useSignals({ page: currentSignalPage, size: 10 })
+
+  // 시그널 모달 상태
+  const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null)
   const [showSignalModal, setShowSignalModal] = useState<boolean>(false)
 
-  const ordersEndRef = useRef<HTMLDivElement>(null)
-  const signalsEndRef = useRef<HTMLDivElement>(null)
-  const router = useRouter()
+  // 선택된 주문의 관련 시그널 조회 (API)
+  const { data: relatedSignal, isLoading: isLoadingRelatedSignal } = useRelatedSignal(selectedOrderId)
 
-  // 주문 취소 함수
-  const handleCancelOrder = (orderId: string) => {
-    // 실제 구현에서는 API 호출로 주문 취소
-    // 여기서는 상태 업데이트만 수행
-    setOrders((prevOrders) =>
-      prevOrders.map((order) => (order.id === orderId ? { ...order, status: "cancel" } : order)),
-    )
-  }
+  const ordersEndRef = useRef<HTMLTableRowElement>(null)
+  const signalsEndRef = useRef<HTMLTableRowElement>(null)
+  const observerRef = useRef<IntersectionObserver | null>(null)  // observer 인스턴스 저장
+  const signalObserverRef = useRef<IntersectionObserver | null>(null)  // signal observer
+
+  // 주문 데이터 로드 시 누적
+  useEffect(() => {
+    if (orderData?.orders) {
+      console.log('📦 Order data received:', {
+        page: currentPage,
+        ordersCount: orderData.orders.length,
+        hasMore: orderData.hasMore,
+        totalElements: orderData.totalElements
+      })
+
+      if (currentPage === 0) {
+        // 첫 페이지면 초기화
+        setAllOrders(orderData.orders)
+      } else {
+        // 추가 페이지면 중복 제거 후 누적
+        setAllOrders(prev => {
+          const newOrders = orderData.orders.filter(
+            newOrder => !prev.some(existing => existing.id === newOrder.id)
+          )
+          return [...prev, ...newOrders]
+        })
+      }
+      setHasMoreOrders(orderData.hasMore)
+      setIsLoadingMoreOrders(false)
+    }
+  }, [orderData, currentPage])
 
   // 관련 시그널 보기 함수
-  const handleViewRelatedSignals = useCallback(
-    (orderId: string) => {
-      // 실제 구현에서는 API 호출로 관련 시그널 가져오기
-      // 여기서는 더미 데이터에서 필터링
-      const relatedSignals = INITIAL_SIGNALS.filter(
-        (signal) =>
-          signal.related_order_id === orderId || orders.find((o) => o.id === orderId)?.related_signal_id === signal.id,
-      )
+  const handleViewRelatedSignals = (orderId: number) => {
+    setSelectedOrderId(orderId)
+    setShowSignalModal(true)
+  }
 
-      if (relatedSignals.length === 0) {
-        // 관련 시그널이 없는 경우, 랜덤 시그널 3개 생성
-        const dummyRelatedSignals = generateDummySignals(3).map((signal) => ({
-          ...signal,
-          related_order_id: orderId,
-        }))
-        setSelectedSignals(dummyRelatedSignals)
-      } else {
-        setSelectedSignals(relatedSignals)
-      }
+  // 무한 스크롤 - 주문 로그
+  const loadMoreOrders = useCallback(() => {
+    console.log('🔄 loadMoreOrders called:', {
+      isLoadingMoreOrders,
+      hasMoreOrders,
+      isLoadingOrders,
+      currentPage
+    })
 
-      setShowSignalModal(true)
-    },
-    [orders],
-  )
+    if (isLoadingMoreOrders || !hasMoreOrders || isLoadingOrders) {
+      console.log('⛔ Loading blocked:', {
+        isLoadingMoreOrders,
+        hasMoreOrders,
+        isLoadingOrders
+      })
+      return
+    }
 
-  // 무한 스크롤 - 주문 내역
-  const loadMoreOrders = useCallback(async () => {
-    if (isLoadingMoreOrders || !hasMoreOrders) return
-
+    console.log('✅ Loading next page:', currentPage + 1)
     setIsLoadingMoreOrders(true)
+    setCurrentPage(prev => prev + 1)
+  }, [isLoadingMoreOrders, hasMoreOrders, isLoadingOrders, currentPage])
 
-    // 실제 구현에서는 API 호출로 추가 데이터 가져오기
-    // 여기서는 지연 시간을 두고 더미 데이터 추가
-    setTimeout(() => {
-      const newOrders = generateDummyOrders(LOAD_MORE_SIZE)
-      setOrders((prev) => [...prev, ...newOrders])
+  // 시그널 데이터 로드 시 누적
+  useEffect(() => {
+    console.log('🔍 [Signal Data Effect] Triggered:', {
+      hasSignalData: !!signalData?.signals,
+      signalsCount: signalData?.signals?.length,
+      currentSignalPage,
+      signalData
+    })
 
-      // 최대 200개까지만 로드 (무한 스크롤 데모용)
-      if (orders.length + LOAD_MORE_SIZE >= 200) {
-        setHasMoreOrders(false)
+    if (signalData?.signals) {
+      console.log('📊 [Signal Data] Processing:', {
+        receivedSignals: signalData.signals.length,
+        hasMore: signalData.hasMore,
+        currentPage: signalData.currentPage
+      })
+
+      if (currentSignalPage === 0) {
+        console.log('🔄 [Signal Data] Initial load - setting all signals')
+        setAllSignals(signalData.signals)
+      } else {
+        setAllSignals(prev => {
+          const newSignals = signalData.signals.filter(
+            newSignal => !prev.some(existing => existing.id === newSignal.id)
+          )
+          console.log('➕ [Signal Data] Appending new signals:', {
+            previousCount: prev.length,
+            newCount: newSignals.length,
+            totalAfter: prev.length + newSignals.length
+          })
+          return [...prev, ...newSignals]
+        })
       }
-
-      setIsLoadingMoreOrders(false)
-    }, 800)
-  }, [isLoadingMoreOrders, hasMoreOrders, orders.length])
+      setHasMoreSignals(signalData.hasMore)
+      setIsLoadingMoreSignals(false)
+    }
+  }, [signalData, currentSignalPage])
 
   // 무한 스크롤 - 시그널 로그
-  const loadMoreSignals = useCallback(async () => {
-    if (isLoadingMoreSignals || !hasMoreSignals) return
+  const loadMoreSignals = useCallback(() => {
+    if (isLoadingMoreSignals || !hasMoreSignals || isLoadingSignals) return
 
     setIsLoadingMoreSignals(true)
+    setCurrentSignalPage(prev => prev + 1)
+  }, [isLoadingMoreSignals, hasMoreSignals, isLoadingSignals])
 
-    // 실제 구현에서는 API 호출로 추가 데이터 가져오기
-    // 여기서는 지연 시간을 두고 더미 데이터 추가
-    setTimeout(() => {
-      const newSignals = generateDummySignals(LOAD_MORE_SIZE)
-      setSignals((prev) => [...prev, ...newSignals])
 
-      // 최대 200개까지만 로드 (무한 스크롤 데모용)
-      if (signals.length + LOAD_MORE_SIZE >= 200) {
-        setHasMoreSignals(false)
-      }
 
-      setIsLoadingMoreSignals(false)
-    }, 800)
-  }, [isLoadingMoreSignals, hasMoreSignals, signals.length])
-
-  // 인터섹션 옵저버 설정 - 주문 내역
+  // 인터섹션 옵저버 설정 - 주문 로그
   useEffect(() => {
-    if (!ordersEndRef.current || activeTab !== "orders") return
+    // 이전 observer cleanup
+    if (observerRef.current) {
+      observerRef.current.disconnect()
+      observerRef.current = null
+    }
+
+    if (!ordersEndRef.current || activeTab !== "orders" || !hasMoreOrders) {
+      return
+    }
 
     const observer = new IntersectionObserver(
       (entries) => {
@@ -236,21 +174,31 @@ export default function OrdersPage() {
           loadMoreOrders()
         }
       },
-      { threshold: 0.5 },
+      { threshold: 0.1 }
     )
 
     observer.observe(ordersEndRef.current)
+    observerRef.current = observer
 
     return () => {
-      if (ordersEndRef.current) {
-        observer.unobserve(ordersEndRef.current)
+      if (observerRef.current) {
+        observerRef.current.disconnect()
+        observerRef.current = null
       }
     }
-  }, [loadMoreOrders, activeTab])
+  }, [loadMoreOrders, activeTab, hasMoreOrders, allOrders.length])  // allOrders.length 추가!
 
   // 인터섹션 옵저버 설정 - 시그널 로그
   useEffect(() => {
-    if (!signalsEndRef.current || activeTab !== "signals") return
+    // 이전 observer cleanup
+    if (signalObserverRef.current) {
+      signalObserverRef.current.disconnect()
+      signalObserverRef.current = null
+    }
+
+    if (!signalsEndRef.current || activeTab !== "signals" || !hasMoreSignals) {
+      return
+    }
 
     const observer = new IntersectionObserver(
       (entries) => {
@@ -258,17 +206,19 @@ export default function OrdersPage() {
           loadMoreSignals()
         }
       },
-      { threshold: 0.5 },
+      { threshold: 0.1 }
     )
 
     observer.observe(signalsEndRef.current)
+    signalObserverRef.current = observer
 
     return () => {
-      if (signalsEndRef.current) {
-        observer.unobserve(signalsEndRef.current)
+      if (signalObserverRef.current) {
+        signalObserverRef.current.disconnect()
+        signalObserverRef.current = null
       }
     }
-  }, [loadMoreSignals, activeTab])
+  }, [loadMoreSignals, activeTab, hasMoreSignals, allSignals.length])
 
   // 날짜 포맷 함수
   const formatDate = (dateString: string): string => {
@@ -347,88 +297,90 @@ export default function OrdersPage() {
                           <th className="py-3 px-4 text-right font-medium">주문 가격</th>
                           <th className="py-3 px-4 text-right font-medium">주문 수량</th>
                           <th className="py-3 px-4 text-right font-medium">총 금액</th>
-                          <th className="py-3 px-4 text-center font-medium">상태</th>
                           <th className="py-3 px-4 text-center font-medium">생성 시간</th>
                           <th className="py-3 px-4 text-center font-medium">시그널</th>
-                          <th className="py-3 px-4 text-center font-medium">액션</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {orders.map((order) => (
-                          <tr key={order.id} className="border-b hover:bg-muted/50">
-                            <td className="py-3 px-4 text-sm">{order.id}</td>
-                            <td className="py-3 px-4 text-sm">{order.market}</td>
-                            <td className="py-3 px-4">
-                              <Badge variant={order.side === "bid" ? "default" : "destructive"}>
-                                {order.side === "bid" ? "매수" : "매도"}
-                              </Badge>
-                            </td>
-                            <td className="py-3 px-4 text-right">{order.price.toLocaleString()}원</td>
-                            <td className="py-3 px-4 text-right">{order.volume}</td>
-                            <td className="py-3 px-4 text-right">{(order.price * order.volume).toLocaleString()}원</td>
-                            <td className="py-3 px-4 text-center">
-                              {order.status === "wait" ? (
-                                <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">
-                                  <Clock className="h-3 w-3 mr-1" />
-                                  대기
-                                </Badge>
-                              ) : order.status === "done" ? (
-                                <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                                  <Check className="h-3 w-3 mr-1" />
-                                  완료
-                                </Badge>
-                              ) : (
-                                <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
-                                  <X className="h-3 w-3 mr-1" />
-                                  취소
-                                </Badge>
-                              )}
-                            </td>
-                            <td className="py-3 px-4 text-center text-sm">{formatDate(order.created_at)}</td>
-                            <td className="py-3 px-4 text-center">
-                              {order.related_signal_id && (
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="h-8 text-xs bg-blue-50 text-blue-700 border-blue-200"
-                                  onClick={() => handleViewRelatedSignals(order.id)}
-                                >
-                                  <Zap className="h-3 w-3 mr-1" />
-                                  시그널 보기
-                                </Button>
-                              )}
-                            </td>
-                            <td className="py-3 px-4 text-center">
-                              {order.status === "wait" && (
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="h-8 text-xs bg-red-50 text-red-700 border-red-200"
-                                  onClick={() => handleCancelOrder(order.id)}
-                                >
-                                  <X className="h-3 w-3 mr-1" />
-                                  취소
-                                </Button>
-                              )}
+                        {isLoadingOrders && currentPage === 0 ? (
+                          <tr>
+                            <td colSpan={8} className="py-8 text-center">
+                              <Loader2 className="h-6 w-6 animate-spin mx-auto" />
                             </td>
                           </tr>
-                        ))}
+                        ) : !user?.apiKeyRegistered ? (
+                          <tr>
+                            <td colSpan={8} className="py-8 text-center">
+                              <div className="flex flex-col items-center space-y-4">
+                                <Key className="h-12 w-12 text-muted-foreground" />
+                                <div>
+                                  <p className="text-muted-foreground">API 키를 먼저 등록해주세요</p>
+                                  <Button
+                                    variant="outline"
+                                    className="mt-2"
+                                    onClick={() => router.push("/mypage")}
+                                  >
+                                    API 키 등록하러 가기
+                                  </Button>
+                                </div>
+                              </div>
+                            </td>
+                          </tr>
+                        ) : allOrders.length === 0 ? (
+                          <tr>
+                            <td colSpan={8} className="py-8 text-center">
+                              <div className="flex flex-col items-center space-y-4">
+                                <AlertTriangle className="h-12 w-12 text-muted-foreground" />
+                                <p className="text-muted-foreground">주문 내역이 없습니다</p>
+                              </div>
+                            </td>
+                          </tr>
+                        ) : (
+                          <>
+                            {allOrders.map((order) => (
+                              <tr key={order.id} className="border-b hover:bg-muted/50">
+                                <td className="py-3 px-4 text-sm">{order.id}</td>
+                                <td className="py-3 px-4">{order.market}</td>
+                                <td className="py-3 px-4">
+                                  <Badge variant={order.side === "bid" ? "default" : "destructive"}>
+                                    {order.side === "bid" ? "매수" : "매도"}
+                                  </Badge>
+                                </td>
+                                <td className="py-3 px-4 text-right">{order.price?.toLocaleString()} KRW</td>
+                                <td className="py-3 px-4 text-right">
+                                  {order.volume?.toLocaleString(undefined, { maximumFractionDigits: 8 })}
+                                </td>
+                                <td className="py-3 px-4 text-right font-medium">
+                                  {order.totalAmount?.toLocaleString()} KRW
+                                </td>
+                                <td className="py-3 px-4 text-center text-sm">{formatDate(order.createdAt)}</td>
+                                <td className="py-3 px-4 text-center">
+                                  {order.relatedSignalId && (
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      className="h-8 text-xs bg-blue-50 text-blue-700 border-blue-200"
+                                      onClick={() => handleViewRelatedSignals(order.id)}
+                                    >
+                                      <Zap className="h-3 w-3 mr-1" />
+                                      시그널 보기
+                                    </Button>
+                                  )}
+                                </td>
+                              </tr>
+                            ))}
+                            {/* 무한 스크롤 트리거 */}
+                            {hasMoreOrders && (
+                              <tr ref={ordersEndRef}>
+                                <td colSpan={8} className="py-4 text-center">
+                                  <Loader2 className="h-5 w-5 animate-spin mx-auto text-muted-foreground" />
+                                </td>
+                              </tr>
+                            )}
+                          </>
+                        )}
                       </tbody>
                     </table>
-                  </div>
-
-                  {/* 무한 스크롤 로딩 인디케이터 */}
-                  <div ref={ordersEndRef} className="py-4 text-center">
-                    {isLoadingMoreOrders ? (
-                      <div className="flex items-center justify-center">
-                        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground mr-2" />
-                        <span className="text-sm text-muted-foreground">데이터를 불러오는 중...</span>
-                      </div>
-                    ) : hasMoreOrders ? (
-                      <span className="text-sm text-muted-foreground">스크롤하여 더 불러오기</span>
-                    ) : (
-                      <span className="text-sm text-muted-foreground">모든 주문 내역을 불러왔습니다</span>
-                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -438,7 +390,7 @@ export default function OrdersPage() {
               <Card>
                 <CardHeader>
                   <CardTitle>시그널 로그</CardTitle>
-                  <CardDescription>자동 매매 시그널 로그를 확인합니다.</CardDescription>
+                  <CardDescription>모든 자동 매매 시그널 로그를 확인합니다. 전략 선택에 참고하세요.</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="overflow-x-auto">
@@ -451,62 +403,56 @@ export default function OrdersPage() {
                           <th className="py-3 px-4 text-left font-medium">매매 유형</th>
                           <th className="py-3 px-4 text-left font-medium">트리거 조건</th>
                           <th className="py-3 px-4 text-center font-medium">생성 시간</th>
-                          <th className="py-3 px-4 text-center font-medium">상태</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {signals.map((signal) => (
-                          <tr key={signal.id} className="border-b hover:bg-muted/50">
-                            <td className="py-3 px-4 text-sm">{signal.id}</td>
-                            <td className="py-3 px-4">{signal.strategy}</td>
-                            <td className="py-3 px-4">{signal.market}</td>
-                            <td className="py-3 px-4">
-                              <Badge variant={signal.side === "bid" ? "default" : "destructive"}>
-                                {signal.side === "bid" ? "매수" : "매도"}
-                              </Badge>
-                            </td>
-                            <td className="py-3 px-4">
-                              <code className="px-1 py-0.5 rounded bg-muted font-mono text-sm">
-                                {signal.trigger_condition}
-                              </code>
-                            </td>
-                            <td className="py-3 px-4 text-center text-sm">{formatDate(signal.created_at)}</td>
-                            <td className="py-3 px-4 text-center">
-                              {signal.status === "triggered" ? (
-                                <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                                  <Check className="h-3 w-3 mr-1" />
-                                  실행됨
-                                </Badge>
-                              ) : signal.status === "pending" ? (
-                                <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">
-                                  <Clock className="h-3 w-3 mr-1" />
-                                  대기중
-                                </Badge>
-                              ) : (
-                                <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
-                                  <X className="h-3 w-3 mr-1" />
-                                  만료됨
-                                </Badge>
-                              )}
+                        {isLoadingSignals && currentSignalPage === 0 ? (
+                          <tr>
+                            <td colSpan={6} className="py-8 text-center">
+                              <Loader2 className="h-6 w-6 animate-spin mx-auto" />
                             </td>
                           </tr>
-                        ))}
+                        ) : allSignals.length === 0 ? (
+                          <tr>
+                            <td colSpan={6} className="py-8 text-center">
+                              <div className="flex flex-col items-center space-y-4">
+                                <AlertTriangle className="h-12 w-12 text-muted-foreground" />
+                                <p className="text-muted-foreground">시그널 로그가 없습니다</p>
+                              </div>
+                            </td>
+                          </tr>
+                        ) : (
+                          <>
+                            {allSignals.map((signal) => (
+                              <tr key={signal.id} className="border-b hover:bg-muted/50">
+                                <td className="py-3 px-4 text-sm">{signal.id}</td>
+                                <td className="py-3 px-4">{signal.strategy}</td>
+                                <td className="py-3 px-4">{signal.market}</td>
+                                <td className="py-3 px-4">
+                                  <Badge variant={signal.side === "bid" ? "default" : "destructive"}>
+                                    {signal.side === "bid" ? "매수" : "매도"}
+                                  </Badge>
+                                </td>
+                                <td className="py-3 px-4">
+                                  <code className="px-1 py-0.5 rounded bg-muted font-mono text-sm">
+                                    {signal.conditions || "-"}
+                                  </code>
+                                </td>
+                                <td className="py-3 px-4 text-center text-sm">{formatDate(signal.createdAt)}</td>
+                              </tr>
+                            ))}
+                            {/* 무한 스크롤 트리거 */}
+                            {hasMoreSignals && (
+                              <tr ref={signalsEndRef}>
+                                <td colSpan={6} className="py-4 text-center">
+                                  <Loader2 className="h-5 w-5 animate-spin mx-auto text-muted-foreground" />
+                                </td>
+                              </tr>
+                            )}
+                          </>
+                        )}
                       </tbody>
                     </table>
-                  </div>
-
-                  {/* 무한 스크롤 로딩 인디케이터 */}
-                  <div ref={signalsEndRef} className="py-4 text-center">
-                    {isLoadingMoreSignals ? (
-                      <div className="flex items-center justify-center">
-                        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground mr-2" />
-                        <span className="text-sm text-muted-foreground">데이터를 불러오는 중...</span>
-                      </div>
-                    ) : hasMoreSignals ? (
-                      <span className="text-sm text-muted-foreground">스크롤하여 더 불러오기</span>
-                    ) : (
-                      <span className="text-sm text-muted-foreground">모든 시그널 로그를 불러왔습니다</span>
-                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -522,7 +468,7 @@ export default function OrdersPage() {
               <DialogDescription>주문과 관련된 시그널 정보를 확인합니다.</DialogDescription>
             </DialogHeader>
             <div className="overflow-y-auto flex-1 pr-2">
-              {selectedSignals.length === 0 ? (
+              {!isLoadingRelatedSignal && !relatedSignal ? (
                 <div className="flex flex-col items-center justify-center py-8 text-center">
                   <AlertTriangle className="h-12 w-12 text-muted-foreground mb-4" />
                   <h3 className="text-lg font-medium mb-2">관련 시그널이 없습니다</h3>
@@ -538,55 +484,36 @@ export default function OrdersPage() {
                       <th className="py-3 px-4 text-left font-medium">전략</th>
                       <th className="py-3 px-4 text-left font-medium">마켓</th>
                       <th className="py-3 px-4 text-left font-medium">매매 유형</th>
-                      <th className="py-3 px-4 text-left font-medium">트리거 조건</th>
                       <th className="py-3 px-4 text-center font-medium">생성 시간</th>
-                      <th className="py-3 px-4 text-center font-medium">상태</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {selectedSignals.map((signal) => (
-                      <tr key={signal.id} className="border-b hover:bg-muted/50">
-                        <td className="py-3 px-4 text-sm">{signal.id}</td>
-                        <td className="py-3 px-4">{signal.strategy}</td>
-                        <td className="py-3 px-4">{signal.market}</td>
-                        <td className="py-3 px-4">
-                          <Badge variant={signal.side === "bid" ? "default" : "destructive"}>
-                            {signal.side === "bid" ? "매수" : "매도"}
-                          </Badge>
-                        </td>
-                        <td className="py-3 px-4">
-                          <code className="px-1 py-0.5 rounded bg-muted font-mono text-sm">
-                            {signal.trigger_condition}
-                          </code>
-                        </td>
-                        <td className="py-3 px-4 text-center text-sm">{formatDate(signal.created_at)}</td>
-                        <td className="py-3 px-4 text-center">
-                          {signal.status === "triggered" ? (
-                            <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                              <Check className="h-3 w-3 mr-1" />
-                              실행됨
-                            </Badge>
-                          ) : signal.status === "pending" ? (
-                            <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">
-                              <Clock className="h-3 w-3 mr-1" />
-                              대기중
-                            </Badge>
-                          ) : (
-                            <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
-                              <X className="h-3 w-3 mr-1" />
-                              만료됨
-                            </Badge>
-                          )}
+                    {isLoadingRelatedSignal ? (
+                      <tr>
+                        <td colSpan={5} className="py-8 text-center">
+                          <Loader2 className="h-6 w-6 animate-spin mx-auto" />
                         </td>
                       </tr>
-                    ))}
+                    ) : relatedSignal && (
+                      <tr className="border-b hover:bg-muted/50">
+                        <td className="py-3 px-4 text-sm">{relatedSignal.id}</td>
+                        <td className="py-3 px-4">{relatedSignal.strategy}</td>
+                        <td className="py-3 px-4">{relatedSignal.market}</td>
+                        <td className="py-3 px-4">
+                          <Badge variant={relatedSignal.side === "bid" ? "default" : "destructive"}>
+                            {relatedSignal.side === "bid" ? "매수" : "매도"}
+                          </Badge>
+                        </td>
+                        <td className="py-3 px-4 text-center text-sm">{formatDate(relatedSignal.createdAt)}</td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               )}
             </div>
           </DialogContent>
-        </Dialog>
-      </div>
-    </AuthGuard>
+        </Dialog >
+      </div >
+    </AuthGuard >
   )
 }
