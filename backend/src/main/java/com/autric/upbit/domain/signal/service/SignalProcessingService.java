@@ -13,11 +13,14 @@ import com.autric.upbit.external.kafka.dto.SignalMessage;
 import com.autric.upbit.external.upbit.client.UpbitApiClient;
 import com.autric.upbit.external.upbit.dto.response.UpbitAccountResponse;
 import com.autric.upbit.external.upbit.dto.response.UpbitOrderResponse;
+import com.autric.upbit.external.upbit.dto.response.UpbitTradeResponse;
 import com.autric.upbit.external.upbit.service.UpbitOrderCalculatorService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.List;
 
 @Service
@@ -55,20 +58,59 @@ public class SignalProcessingService {
             }
 
             try {
-                List<UpbitAccountResponse> accounts = upbitApiClient.getAccounts(apiKey.getAccessKey(), apiKey.getSecretKey());
+                List<UpbitAccountResponse> accounts = upbitApiClient.getAccounts(apiKey.getAccessKey(),
+                        apiKey.getSecretKey());
 
                 String price = upbitOrderCalculatorService.getPrice(accounts);
                 String volume = upbitOrderCalculatorService.getVolume(accounts, msg.getMarket());
 
                 // 주문 자산이 부족(5천원 미만)하거나, 매도 수량이 부족할 경우 continue
                 if ((msg.getSide().equals("bid") && price == null) ||
-                        (msg.getSide().equals("ask") && volume == null)) continue;
+                        (msg.getSide().equals("ask") && volume == null))
+                    continue;
 
                 UpbitOrderResponse res = upbitApiClient.upbitOrder(
                         apiKey.getAccessKey(), apiKey.getSecretKey(), msg.getMarket(),
                         msg.getSide(), price, volume);
+
+                // 잠시 대기 (체결 내역 반영)
+                try {
+                    Thread.sleep(200);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+
+                // 주문 상세 조회 및 체결 내역 기반 계산 (가중 평균)
+                try {
+                    UpbitOrderResponse orderDetail = upbitApiClient.getOrder(apiKey.getAccessKey(),
+                            apiKey.getSecretKey(), res.getUuid());
+
+                    if (orderDetail.getTrades() != null && !orderDetail.getTrades().isEmpty()) {
+                        BigDecimal totalVolume = BigDecimal.ZERO;
+                        BigDecimal totalFunds = BigDecimal.ZERO;
+
+                        for (UpbitTradeResponse trade : orderDetail.getTrades()) {
+                            totalVolume = totalVolume.add(new BigDecimal(trade.getVolume()));
+                            totalFunds = totalFunds.add(new BigDecimal(trade.getFunds()));
+                        }
+
+                        if (totalVolume.compareTo(BigDecimal.ZERO) > 0) {
+                            BigDecimal avgPrice = totalFunds.divide(totalVolume, 8, RoundingMode.HALF_UP); // 소수점 8자리까지
+
+                            res.setPrice(avgPrice.toPlainString());
+                            res.setVolume(totalVolume.toPlainString());
+                            // executed_volume도 업데이트
+                            res.setExecutedVolume(totalVolume.toPlainString());
+                        }
+                    }
+                } catch (Exception e) {
+                    log.warn("Failed to fetch order detail for calculation: {}", e.getMessage());
+                    // 실패해도 원래 res 값으로 저장 시도
+                }
+
                 log.info("Member {} trade success: market={}, executed_volume={}, price={}, uuid={}, ordType={}",
-                        m.getId(), res.getMarket(), res.getExecutedVolume(), res.getPrice(), res.getUuid(), res.getOrdType());
+                        m.getId(), res.getMarket(), res.getExecutedVolume(), res.getPrice(), res.getUuid(),
+                        res.getOrdType());
 
                 orderService.createOrder(res.toOrderEntity(market, m, signal));
 

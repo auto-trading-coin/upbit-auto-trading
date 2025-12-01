@@ -1,7 +1,6 @@
 package com.autric.upbit.domain.order.service;
 
 import com.autric.upbit.domain.order.dto.response.OrderListResponse;
-import com.autric.upbit.domain.order.dto.response.OrderResponse;
 import com.autric.upbit.domain.order.entity.Orders;
 import com.autric.upbit.domain.order.repository.OrderRepository;
 import com.autric.upbit.domain.signal.dto.response.SignalResponse;
@@ -38,18 +37,7 @@ public class OrderService {
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
         Page<Orders> orderPage = orderRepository.findByMemberIdWithDetails(memberId, pageable);
 
-        List<OrderResponse> orderResponses = orderPage.getContent().stream()
-                .map(OrderResponse::fromEntity)
-                .toList();
-
-        return OrderListResponse.builder()
-                .orders(orderResponses)
-                .totalPages(orderPage.getTotalPages())
-                .totalElements(orderPage.getTotalElements())
-                .currentPage(page)
-                .pageSize(size)
-                .hasMore(orderPage.hasNext())
-                .build();
+        return OrderListResponse.fromEntity(orderPage);
     }
 
     /**

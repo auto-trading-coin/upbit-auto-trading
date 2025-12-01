@@ -40,7 +40,7 @@ public class UpbitApiClient {
      * @return 업비트 API용 UTC 포맷 문자열 (yyyy-MM-dd HH:mm:ss)
      */
     private String formatToUtcParam(LocalDateTime kstTime) {
-        if(kstTime == null) return null;
+        if (kstTime == null) return null;
         return kstTime
                 .atZone(ZoneId.of("Asia/Seoul"))
                 .withZoneSameInstant(ZoneId.of("UTC"))
@@ -51,9 +51,9 @@ public class UpbitApiClient {
      * 업비트 분봉 캔들 데이터를 조회합니다.
      *
      * @param market 마켓 정보 (예: KRW-BTC)
-     * @param unit 캔들 단위 (예: 1, 5, 30, 60, 240)
-     * @param count 조회할 캔들 수 (최대 200)
-     * @param to 조회 종료 시각 (KST)
+     * @param unit   캔들 단위 (예: 1, 5, 30, 60, 240)
+     * @param count  조회할 캔들 수 (최대 200)
+     * @param to     조회 종료 시각 (KST)
      * @return 캔들 응답 리스트
      */
     public List<UpbitCandleResponse> getMinuteCandles(Market market, Integer unit, int count, LocalDateTime to) {
@@ -80,8 +80,8 @@ public class UpbitApiClient {
      * 업비트 일봉 캔들 데이터를 조회합니다.
      *
      * @param market 마켓 정보 (예: KRW-BTC)
-     * @param count 조회할 캔들 수 (최대 200)
-     * @param to 조회 종료 시각 (KST)
+     * @param count  조회할 캔들 수 (최대 200)
+     * @param to     조회 종료 시각 (KST)
      * @return 캔들 응답 리스트
      */
     public List<UpbitCandleResponse> getDayCandles(Market market, int count, LocalDateTime to) {
@@ -105,9 +105,10 @@ public class UpbitApiClient {
     }
 
     /**
-     * 사용자의 업비트 계좌 정보를 조회합니다. (API 키 검증용)
+     * 사용자의 업비트 계좌 정보를 조회 (API 키 검증용)
      *
-     * @param jwtToken 업비트 JWT
+     * @param accessKey
+     * @param secretKey
      */
     public void getAccount(String accessKey, String secretKey) {
         String jwtToken = upbitUtil.createUpbitJwt(accessKey, secretKey);
@@ -122,7 +123,8 @@ public class UpbitApiClient {
     /**
      * 사용자의 업비트 계정 잔고 리스트 조회
      *
-     * @param jwtToken 업비트 JWT
+     * @param accessKey
+     * @param secretKey
      * @return 사용자 별 잔고 리스트
      */
     public List<UpbitAccountResponse> getAccounts(String accessKey, String secretKey) {
@@ -141,22 +143,22 @@ public class UpbitApiClient {
      *
      * @param accessKey 업비트 키
      * @param secretKey 업비트 키
-     * @param market 통화 코드 (예: KRW, KRW-BTC, KRW-ETH)
-     * @param side 주문 방향 (예: bid, ask / 시장가 매수, 시장가 매도)
-     * @param price 주문 단가 또는 총액
-     * @param volume 주문 수량
+     * @param market    통화 코드 (예: KRW, KRW-BTC, KRW-ETH)
+     * @param side      주문 방향 (예: bid, ask / 시장가 매수, 시장가 매도)
+     * @param price     주문 단가 또는 총액
+     * @param volume    주문 수량
      * @return UpbitOrderResponse
      */
-    public UpbitOrderResponse upbitOrder(String accessKey, String secretKey, String market, String side, String price, String volume) {
+    public UpbitOrderResponse upbitOrder(String accessKey, String secretKey, String market, String side, String price,
+            String volume) {
         Map<String, String> params = new LinkedHashMap<>();
         params.put("market", market);
-        params.put("side", side);  // bid : 시장가 매수, ask : 시장가 매도
+        params.put("side", side); // bid : 시장가 매수, ask : 시장가 매도
 
         if(side.equals("bid")) {
             params.put("ord_type", "price");
             params.put("price", price);
-        }
-        else if(side.equals("ask")) {
+        } else if(side.equals("ask")) {
             params.put("ord_type", "market");
             params.put("volume", volume);
         }
@@ -171,8 +173,7 @@ public class UpbitApiClient {
                     .retrieve()
                     .bodyToMono(UpbitOrderResponse.class)
                     .block();
-        }
-        catch (WebClientResponseException e) {
+        } catch (WebClientResponseException e) {
             // ★ 여기서 상태코드/헤더/오류 바디를 그대로 확인 가능
             log.error("Upbit order FAILED: status={}, body={}",
                     e.getRawStatusCode(), e.getResponseBodyAsString(), e);
@@ -181,6 +182,30 @@ public class UpbitApiClient {
             log.error("Upbit order FAILED (non-HTTP): {}", e.getMessage(), e);
             throw e;
         }
+    }
+
+    /**
+     * 개별 주문 조회
+     *
+     * @param accessKey 업비트 키
+     * @param secretKey 업비트 키
+     * @param uuid      주문 UUID
+     * @return UpbitOrderResponse
+     */
+    public UpbitOrderResponse getOrder(String accessKey, String secretKey, String uuid) {
+        Map<String, String> params = new LinkedHashMap<>();
+        params.put("uuid", uuid);
+
+        String jwt = upbitUtil.createUpbitJwt(accessKey, secretKey, params);
+
+        return upbitWebClient.get()
+                .uri(uriBuilder -> uriBuilder.path("/v1/order")
+                        .queryParam("uuid", uuid)
+                        .build())
+                .header("Authorization", "Bearer " + jwt)
+                .retrieve()
+                .bodyToMono(UpbitOrderResponse.class)
+                .block();
     }
 
     public UpbitTradePriceResponse getCurrentPrice(String marketCode) {

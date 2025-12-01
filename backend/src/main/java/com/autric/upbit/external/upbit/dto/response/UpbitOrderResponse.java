@@ -80,6 +80,9 @@ public class UpbitOrderResponse {
     @JsonProperty("trades_count")
     private String tradesCount;
 
+    /** 체결 내역 */
+    private java.util.List<UpbitTradeResponse> trades;
+
     public Orders toOrderEntity(Market market, Member member, Signals signal) {
         return Orders.builder()
                 .member(member)
@@ -88,11 +91,10 @@ public class UpbitOrderResponse {
                 .uuid(this.uuid)
                 .side(Side.fromValue(this.side))
                 .ordType(OrderType.fromValue(this.ordType))
-                .volume(this.volume != null ? new BigDecimal(this.volume) : BigDecimal.ZERO)
+                .volume(this.executedVolume != null ? new BigDecimal(this.executedVolume) : BigDecimal.ZERO)
                 .price(this.price != null ? new BigDecimal(this.price) : BigDecimal.ZERO)
                 .status(OrderStatus.fromValue(this.state))
                 .build();
     }
-
 
 }
