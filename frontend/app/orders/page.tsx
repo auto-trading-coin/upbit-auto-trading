@@ -133,8 +133,13 @@ export default function OrdersPage() {
         // 첫 페이지면 초기화
         setAllOrders(orderData.orders)
       } else {
-        // 추가 페이지면 누적
-        setAllOrders(prev => [...prev, ...orderData.orders])
+        // 추가 페이지면 중복 제거 후 누적
+        setAllOrders(prev => {
+          const newOrders = orderData.orders.filter(
+            newOrder => !prev.some(existing => existing.id === newOrder.id)
+          )
+          return [...prev, ...newOrders]
+        })
       }
       setHasMoreOrders(orderData.hasMore)
       setIsLoadingMoreOrders(false)
@@ -375,7 +380,9 @@ export default function OrdersPage() {
                                   </Badge>
                                 </td>
                                 <td className="py-3 px-4 text-right">{order.price?.toLocaleString()} KRW</td>
-                                <td className="py-3 px-4 text-right">{order.volume?.toLocaleString()}</td>
+                                <td className="py-3 px-4 text-right">
+                                  {order.volume?.toLocaleString(undefined, { maximumFractionDigits: 8 })}
+                                </td>
                                 <td className="py-3 px-4 text-right font-medium">
                                   {order.totalAmount?.toLocaleString()} KRW
                                 </td>
