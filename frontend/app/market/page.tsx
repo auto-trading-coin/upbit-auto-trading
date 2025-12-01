@@ -10,12 +10,16 @@ import { ArrowDown, ArrowUp, ArrowUpDown, ExternalLink, Search, TrendingUp, Tren
 import { useMarkets } from "@/hooks/queries/useMarkets"
 import { useFilterStore } from "@/stores"
 import { LoadingSpinner } from "@/components/common"
+import { useIsMounted } from "@/hooks/useIsMounted"
 import type { MarketData } from "@/types"
 
 type SortKey = 'name' | 'price' | 'changeRate' | 'changePrice' | 'tradePrice' | 'tradeVolume'
 type SortOrder = 'asc' | 'desc'
 
 export default function MarketPage() {
+  // 클라이언트 마운트 확인 (Hydration mismatch 방지)
+  const isMounted = useIsMounted()
+  
   // React Query로 실시간 시세 조회 (WebSocket 자동 연결)
   const { data: markets = [], isLoading } = useMarkets()
   
@@ -77,12 +81,12 @@ export default function MarketPage() {
           compareB = b.currentPrice
           break
         case 'changeRate':
-          compareA = a.changeRate
-          compareB = b.changeRate
+          compareA = a.change === 'RISE' ? a.changeRate : a.change === 'FALL' ? -a.changeRate : 0
+          compareB = b.change === 'RISE' ? b.changeRate : b.change === 'FALL' ? -b.changeRate : 0
           break
         case 'changePrice':
-          compareA = a.changePrice
-          compareB = b.changePrice
+          compareA = a.change === 'RISE' ? a.changePrice : a.change === 'FALL' ? -a.changePrice : 0
+          compareB = b.change === 'RISE' ? b.changePrice : b.change === 'FALL' ? -b.changePrice : 0
           break
         case 'tradePrice':
           compareA = a.accTradePrice24h
@@ -270,7 +274,7 @@ export default function MarketPage() {
                     : ""
                 }
               >
-                {item.changeRate > 0 ? '+' : ''}{item.changeRate.toFixed(2)}%
+                {item.change === 'RISE' ? '+' : item.change === 'FALL' ? '-' : ''}{item.changeRate.toFixed(2)}%
               </span>
             </div>
             <div
@@ -282,7 +286,7 @@ export default function MarketPage() {
                   : ""
               }`}
             >
-              {item.changePrice > 0 ? '+' : ''}{item.changePrice.toLocaleString()}
+              {item.change === 'RISE' ? '+' : item.change === 'FALL' ? '-' : ''}{item.changePrice.toLocaleString()}
             </div>
             <div className="text-right text-sm">
               {formatPrice(item.accTradePrice24h)}
@@ -302,7 +306,7 @@ export default function MarketPage() {
     )
   }
 
-  if (isLoading) {
+  if (!isMounted || isLoading) {
     return <LoadingSpinner />
   }
 
