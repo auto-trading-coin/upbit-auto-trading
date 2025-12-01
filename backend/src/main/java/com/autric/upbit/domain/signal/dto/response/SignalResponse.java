@@ -16,6 +16,8 @@ public class SignalResponse {
     private String side; // bid/ask
     private LocalDateTime createdAt; // 생성 시간
 
+    private String conditions; // 전략 조건
+
     @Setter
     private Long relatedOrderId; // 관련 주문 ID (nullable)
 
@@ -26,6 +28,7 @@ public class SignalResponse {
                 .market(signal.getMarket().getCoin())
                 .side(signal.getSide().getValue())
                 .createdAt(signal.getCreatedAt())
+                .conditions(signal.getStrategy().getConditions())
                 // relatedOrderId는 별도 조회 필요 (Order -> Signal 관계이므로)
                 .build();
     }

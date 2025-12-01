@@ -39,5 +39,6 @@ export interface Signal {
   market: string          // Market 엔티티의 market 코드
   side: OrderSide         // 매매 방향
   createdAt: string       // 생성일시 (ISO string)
+  conditions?: string     // 전략 조건
   relatedOrderId?: number // 관련 주문 ID
 }

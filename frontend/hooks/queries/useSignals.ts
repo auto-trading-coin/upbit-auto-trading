@@ -1,44 +1,50 @@
-import { useQuery } from '@tanstack/react-query'
-import { getSignals } from '@/app/api/order'
-import { queryKeys } from '@/lib/utils/queryKeys'
-import { useUser } from './useUser'
+import { useQuery } from "@tanstack/react-query"
+import api from "@/app/api/api"
+import { Signal, SuccessResponse } from "@/types"
+import { queryKeys } from "@/lib/utils/queryKeys"
+import { useUser } from "./useUser"
+
+interface SignalListResponse {
+  signals: Signal[]
+  totalPages: number
+  totalElements: number
+  currentPage: number
+  pageSize: number
+  hasMore: boolean
+}
 
 interface UseSignalsOptions {
   page?: number
   size?: number
 }
 
-/**
- * 시그널 로그 조회 Hook
- * 
- * 전략 서버에서 생성한 매매 시그널 내역 조회
- * 
- * @param options - 페이지 옵션
- * @returns 시그널 로그 쿼리 결과
- * 
- * @example
- * ```tsx
- * const { data: signals, isLoading } = useSignals({ page: 1, size: 20 })
- * 
- * return (
- *   <div>
- *     {signals?.map(signal => (
- *       <div key={signal.id}>
- *         {signal.market} - {signal.side} - {signal.strategyName}
- *       </div>
- *     ))}
- *   </div>
- * )
- * ```
- */
+const getSignals = async (page: number, size: number): Promise<SignalListResponse> => {
+  console.log('🔍 [useSignals] Fetching signals:', { page, size })
+  const { data } = await api.get<SuccessResponse<SignalListResponse>>("/signal", {
+    params: { page, size },
+  })
+  console.log('✅ [useSignals] API Response:', data)
+  console.log('📦 [useSignals] Extracted data:', data.data)
+  return data.data || {
+    signals: [],
+    totalPages: 0,
+    totalElements: 0,
+    currentPage: page,
+    pageSize: size,
+    hasMore: false
+  }
+}
+
 export const useSignals = (options: UseSignalsOptions = {}) => {
-  const { page = 1, size = 20 } = options
+  const { page = 0, size = 10 } = options
   const { data: user } = useUser()
-  
+
+  console.log('🔍 [useSignals] Hook called:', { page, size, apiKeyRegistered: user?.apiKeyRegistered })
+
   return useQuery({
-    queryKey: queryKeys.signals.list(),
+    queryKey: [...queryKeys.signals.list(page), size],
     queryFn: () => getSignals(page, size),
-    enabled: !!user?.apiKeyRegistered,  // API 키가 있을 때만 실행
-    staleTime: 10000,  // 10초
+    enabled: !!user?.apiKeyRegistered,
+    staleTime: 10000, // 10초
   })
 }

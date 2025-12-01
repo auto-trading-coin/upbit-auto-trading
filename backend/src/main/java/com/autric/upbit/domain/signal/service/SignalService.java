@@ -3,6 +3,7 @@ package com.autric.upbit.domain.signal.service;
 import com.autric.upbit.domain.chart.entity.Market;
 import com.autric.upbit.domain.order.entity.Orders;
 import com.autric.upbit.domain.order.repository.OrderRepository;
+import com.autric.upbit.domain.signal.dto.response.SignalListResponse;
 import com.autric.upbit.domain.signal.dto.response.SignalResponse;
 import com.autric.upbit.domain.signal.entity.Signals;
 import com.autric.upbit.domain.signal.repository.SignalRepository;
@@ -12,6 +13,9 @@ import com.autric.upbit.global.response.code.ErrorCode;
 import com.autric.upbit.global.response.exception.BusinessException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -53,5 +57,16 @@ public class SignalService {
                     return response;
                 })
                 .toList();
+    }
+
+    /**
+     * 모든 시그널 목록 조회 (페이징)
+     */
+    @Transactional(readOnly = true)
+    public SignalListResponse getSignalsByMember(Long memberId, int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        Page<Signals> signalPage = signalRepository.findSignalsByMember(pageable);
+
+        return SignalListResponse.fromEntity(signalPage);
     }
 }

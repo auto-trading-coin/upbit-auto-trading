@@ -12,83 +12,10 @@ import { AuthGuard } from "@/components/common"
 import { useUser } from "@/hooks/queries/useUser"
 import { useOrders } from "@/hooks/queries/useOrders"
 import { useRelatedSignal } from "@/hooks/queries/useRelatedSignals"
+import { useSignals } from "@/hooks/queries/useSignals"
 import { Order, Signal } from "@/types"
 
-// 타입 정의
-// 기존 더미 데이터 타입 (시그널 탭용)
-interface DummySignal {
-  id: string
-  strategy: string
-  market: string
-  side: "bid" | "ask"
-  trigger_condition: string
-  created_at: string
-  status: "triggered" | "pending" | "expired"
-  related_order_id?: string
-}
 
-
-
-// 더미 데이터 생성 함수
-
-
-// 더미 시그널 데이터 생성 함수 (시그널 탭용)
-const generateDummySignals = (count: number): DummySignal[] => {
-  const markets = ["BTC-KRW", "ETH-KRW", "XRP-KRW", "SOL-KRW", "ADA-KRW"]
-  const sides: ("bid" | "ask")[] = ["bid", "ask"]
-  const statuses: ("triggered" | "pending" | "expired")[] = ["triggered", "pending", "expired"]
-  const strategies = ["이동평균 돌파", "RSI 과매수/과매도", "볼린저밴드 돌파", "MACD 크로스", "가격 돌파"]
-
-  const now = new Date()
-
-  return Array.from({ length: count }).map((_, index) => {
-    const market = markets[Math.floor(Math.random() * markets.length)]
-    const side = sides[Math.floor(Math.random() * sides.length)]
-    const status = statuses[Math.floor(Math.random() * statuses.length)]
-    const strategy = strategies[Math.floor(Math.random() * strategies.length)]
-
-    // 생성 시간을 최근 7일 내로 랜덤하게 설정
-    const createdAt = new Date(now)
-    createdAt.setDate(now.getDate() - Math.floor(Math.random() * 7))
-    createdAt.setHours(Math.floor(Math.random() * 24))
-    createdAt.setMinutes(Math.floor(Math.random() * 60))
-
-    // 트리거 조건 생성
-    let triggerCondition = ""
-    if (strategy === "이동평균 돌파") {
-      triggerCondition = `price > MA${[20, 50, 100, 200][Math.floor(Math.random() * 4)]}`
-    } else if (strategy === "RSI 과매수/과매도") {
-      triggerCondition = `RSI${[7, 14][Math.floor(Math.random() * 2)]} ${side === "bid" ? "<" : ">"} ${side === "bid" ? 30 : 70}`
-    } else if (strategy === "볼린저밴드 돌파") {
-      triggerCondition = `price ${side === "bid" ? "<" : ">"} BB_${side === "bid" ? "LOWER" : "UPPER"}`
-    } else if (strategy === "MACD 크로스") {
-      triggerCondition = `MACD_LINE ${side === "bid" ? ">" : "<"} SIGNAL_LINE`
-    } else {
-      triggerCondition = `price ${side === "bid" ? "<" : ">"} ${Math.floor(Math.random() * 50000000) + 1000000}`
-    }
-
-    const has_related_order = status === "triggered" && Math.random() > 0.5
-
-    return {
-      id: `SIGNAL${(index + 1).toString().padStart(6, "0")}`,
-      strategy,
-      market,
-      side,
-      trigger_condition: triggerCondition,
-      created_at: createdAt.toISOString(),
-      status,
-      related_order_id: has_related_order
-        ? `ORDER${(Math.floor(Math.random() * 100) + 1).toString().padStart(6, "0")}`
-        : undefined,
-    }
-  })
-}
-
-// 초기 더미 데이터
-const INITIAL_SIGNALS = generateDummySignals(20)
-
-// 추가 데이터 로드 크기
-const LOAD_MORE_SIZE = 10
 
 export default function OrdersPage() {
   const router = useRouter()
@@ -104,9 +31,15 @@ export default function OrdersPage() {
   const { data: orderData, isLoading: isLoadingOrders } = useOrders({ page: currentPage, size: 10 })
 
   const [activeTab, setActiveTab] = useState<string>("orders")
-  const [signals, setSignals] = useState<DummySignal[]>(INITIAL_SIGNALS)
-  const [isLoadingMoreSignals, setIsLoadingMoreSignals] = useState<boolean>(false)
-  const [hasMoreSignals, setHasMoreSignals] = useState<boolean>(true)
+
+  // 시그널 무한스크롤 상태
+  const [currentSignalPage, setCurrentSignalPage] = useState(0)
+  const [allSignals, setAllSignals] = useState<Signal[]>([])
+  const [hasMoreSignals, setHasMoreSignals] = useState(true)
+  const [isLoadingMoreSignals, setIsLoadingMoreSignals] = useState(false)
+
+  // 현재 페이지 시그널 데이터 조회
+  const { data: signalData, isLoading: isLoadingSignals } = useSignals({ page: currentSignalPage, size: 10 })
 
   // 시그널 모달 상태
   const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null)
@@ -116,8 +49,9 @@ export default function OrdersPage() {
   const { data: relatedSignal, isLoading: isLoadingRelatedSignal } = useRelatedSignal(selectedOrderId)
 
   const ordersEndRef = useRef<HTMLTableRowElement>(null)
-  const signalsEndRef = useRef<HTMLDivElement>(null)
+  const signalsEndRef = useRef<HTMLTableRowElement>(null)
   const observerRef = useRef<IntersectionObserver | null>(null)  // observer 인스턴스 저장
+  const signalObserverRef = useRef<IntersectionObserver | null>(null)  // signal observer
 
   // 주문 데이터 로드 시 누적
   useEffect(() => {
@@ -175,27 +109,50 @@ export default function OrdersPage() {
     setCurrentPage(prev => prev + 1)
   }, [isLoadingMoreOrders, hasMoreOrders, isLoadingOrders, currentPage])
 
+  // 시그널 데이터 로드 시 누적
+  useEffect(() => {
+    console.log('🔍 [Signal Data Effect] Triggered:', {
+      hasSignalData: !!signalData?.signals,
+      signalsCount: signalData?.signals?.length,
+      currentSignalPage,
+      signalData
+    })
+
+    if (signalData?.signals) {
+      console.log('📊 [Signal Data] Processing:', {
+        receivedSignals: signalData.signals.length,
+        hasMore: signalData.hasMore,
+        currentPage: signalData.currentPage
+      })
+
+      if (currentSignalPage === 0) {
+        console.log('🔄 [Signal Data] Initial load - setting all signals')
+        setAllSignals(signalData.signals)
+      } else {
+        setAllSignals(prev => {
+          const newSignals = signalData.signals.filter(
+            newSignal => !prev.some(existing => existing.id === newSignal.id)
+          )
+          console.log('➕ [Signal Data] Appending new signals:', {
+            previousCount: prev.length,
+            newCount: newSignals.length,
+            totalAfter: prev.length + newSignals.length
+          })
+          return [...prev, ...newSignals]
+        })
+      }
+      setHasMoreSignals(signalData.hasMore)
+      setIsLoadingMoreSignals(false)
+    }
+  }, [signalData, currentSignalPage])
 
   // 무한 스크롤 - 시그널 로그
-  const loadMoreSignals = useCallback(async () => {
-    if (isLoadingMoreSignals || !hasMoreSignals) return
+  const loadMoreSignals = useCallback(() => {
+    if (isLoadingMoreSignals || !hasMoreSignals || isLoadingSignals) return
 
     setIsLoadingMoreSignals(true)
-
-    // 실제 구현에서는 API 호출로 추가 데이터 가져오기
-    // 여기서는 지연 시간을 두고 더미 데이터 추가
-    setTimeout(() => {
-      const newSignals = generateDummySignals(LOAD_MORE_SIZE)
-      setSignals((prev) => [...prev, ...newSignals])
-
-      // 최대 200개까지만 로드 (무한 스크롤 데모용)
-      if (signals.length + LOAD_MORE_SIZE >= 200) {
-        setHasMoreSignals(false)
-      }
-
-      setIsLoadingMoreSignals(false)
-    }, 800)
-  }, [isLoadingMoreSignals, hasMoreSignals, signals.length])
+    setCurrentSignalPage(prev => prev + 1)
+  }, [isLoadingMoreSignals, hasMoreSignals, isLoadingSignals])
 
 
 
@@ -233,7 +190,15 @@ export default function OrdersPage() {
 
   // 인터섹션 옵저버 설정 - 시그널 로그
   useEffect(() => {
-    if (!signalsEndRef.current || activeTab !== "signals") return
+    // 이전 observer cleanup
+    if (signalObserverRef.current) {
+      signalObserverRef.current.disconnect()
+      signalObserverRef.current = null
+    }
+
+    if (!signalsEndRef.current || activeTab !== "signals" || !hasMoreSignals) {
+      return
+    }
 
     const observer = new IntersectionObserver(
       (entries) => {
@@ -241,17 +206,19 @@ export default function OrdersPage() {
           loadMoreSignals()
         }
       },
-      { threshold: 0.5 },
+      { threshold: 0.1 }
     )
 
     observer.observe(signalsEndRef.current)
+    signalObserverRef.current = observer
 
     return () => {
-      if (signalsEndRef.current) {
-        observer.unobserve(signalsEndRef.current)
+      if (signalObserverRef.current) {
+        signalObserverRef.current.disconnect()
+        signalObserverRef.current = null
       }
     }
-  }, [loadMoreSignals, activeTab])
+  }, [loadMoreSignals, activeTab, hasMoreSignals, allSignals.length])
 
   // 날짜 포맷 함수
   const formatDate = (dateString: string): string => {
@@ -423,7 +390,7 @@ export default function OrdersPage() {
               <Card>
                 <CardHeader>
                   <CardTitle>시그널 로그</CardTitle>
-                  <CardDescription>자동 매매 시그널 로그를 확인합니다.</CardDescription>
+                  <CardDescription>모든 자동 매매 시그널 로그를 확인합니다. 전략 선택에 참고하세요.</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="overflow-x-auto">
@@ -436,62 +403,56 @@ export default function OrdersPage() {
                           <th className="py-3 px-4 text-left font-medium">매매 유형</th>
                           <th className="py-3 px-4 text-left font-medium">트리거 조건</th>
                           <th className="py-3 px-4 text-center font-medium">생성 시간</th>
-                          <th className="py-3 px-4 text-center font-medium">상태</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {signals.map((signal) => (
-                          <tr key={signal.id} className="border-b hover:bg-muted/50">
-                            <td className="py-3 px-4 text-sm">{signal.id}</td>
-                            <td className="py-3 px-4">{signal.strategy}</td>
-                            <td className="py-3 px-4">{signal.market}</td>
-                            <td className="py-3 px-4">
-                              <Badge variant={signal.side === "bid" ? "default" : "destructive"}>
-                                {signal.side === "bid" ? "매수" : "매도"}
-                              </Badge>
-                            </td>
-                            <td className="py-3 px-4">
-                              <code className="px-1 py-0.5 rounded bg-muted font-mono text-sm">
-                                {signal.trigger_condition}
-                              </code>
-                            </td>
-                            <td className="py-3 px-4 text-center text-sm">{formatDate(signal.created_at)}</td>
-                            <td className="py-3 px-4 text-center">
-                              {signal.status === "triggered" ? (
-                                <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                                  <Check className="h-3 w-3 mr-1" />
-                                  실행됨
-                                </Badge>
-                              ) : signal.status === "pending" ? (
-                                <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">
-                                  <Clock className="h-3 w-3 mr-1" />
-                                  대기중
-                                </Badge>
-                              ) : (
-                                <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
-                                  <X className="h-3 w-3 mr-1" />
-                                  만료됨
-                                </Badge>
-                              )}
+                        {isLoadingSignals && currentSignalPage === 0 ? (
+                          <tr>
+                            <td colSpan={6} className="py-8 text-center">
+                              <Loader2 className="h-6 w-6 animate-spin mx-auto" />
                             </td>
                           </tr>
-                        ))}
+                        ) : allSignals.length === 0 ? (
+                          <tr>
+                            <td colSpan={6} className="py-8 text-center">
+                              <div className="flex flex-col items-center space-y-4">
+                                <AlertTriangle className="h-12 w-12 text-muted-foreground" />
+                                <p className="text-muted-foreground">시그널 로그가 없습니다</p>
+                              </div>
+                            </td>
+                          </tr>
+                        ) : (
+                          <>
+                            {allSignals.map((signal) => (
+                              <tr key={signal.id} className="border-b hover:bg-muted/50">
+                                <td className="py-3 px-4 text-sm">{signal.id}</td>
+                                <td className="py-3 px-4">{signal.strategy}</td>
+                                <td className="py-3 px-4">{signal.market}</td>
+                                <td className="py-3 px-4">
+                                  <Badge variant={signal.side === "bid" ? "default" : "destructive"}>
+                                    {signal.side === "bid" ? "매수" : "매도"}
+                                  </Badge>
+                                </td>
+                                <td className="py-3 px-4">
+                                  <code className="px-1 py-0.5 rounded bg-muted font-mono text-sm">
+                                    {signal.conditions || "-"}
+                                  </code>
+                                </td>
+                                <td className="py-3 px-4 text-center text-sm">{formatDate(signal.createdAt)}</td>
+                              </tr>
+                            ))}
+                            {/* 무한 스크롤 트리거 */}
+                            {hasMoreSignals && (
+                              <tr ref={signalsEndRef}>
+                                <td colSpan={6} className="py-4 text-center">
+                                  <Loader2 className="h-5 w-5 animate-spin mx-auto text-muted-foreground" />
+                                </td>
+                              </tr>
+                            )}
+                          </>
+                        )}
                       </tbody>
                     </table>
-                  </div>
-
-                  {/* 무한 스크롤 로딩 인디케이터 */}
-                  <div ref={signalsEndRef} className="py-4 text-center">
-                    {isLoadingMoreSignals ? (
-                      <div className="flex items-center justify-center">
-                        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground mr-2" />
-                        <span className="text-sm text-muted-foreground">데이터를 불러오는 중...</span>
-                      </div>
-                    ) : hasMoreSignals ? (
-                      <span className="text-sm text-muted-foreground">스크롤하여 더 불러오기</span>
-                    ) : (
-                      <span className="text-sm text-muted-foreground">모든 시그널 로그를 불러왔습니다</span>
-                    )}
                   </div>
                 </CardContent>
               </Card>
