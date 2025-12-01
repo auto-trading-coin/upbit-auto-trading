@@ -33,8 +33,12 @@ import { useTradingStatus } from '@/hooks/queries/useTradingStatus';
 import { usePortfolio } from '@/hooks/queries/usePortfolio';
 import { useToggleTrading } from '@/hooks/mutations/useToggleTrading';
 import { useMarkets } from '@/hooks/queries/useMarkets';
+import { useIsMounted } from '@/hooks/useIsMounted';
 
 export default function Dashboard() {
+    // 클라이언트 마운트 확인 (Hydration mismatch 방지)
+    const isMounted = useIsMounted();
+    
     // React Query hooks
     const { data: user, isLoading } = useUser();
     const currentStrategy = useCurrentStrategy();
@@ -50,7 +54,8 @@ export default function Dashboard() {
     // 인증 여부
     const isAuthenticated = !!user;
 
-    if (isLoading) {
+    // 서버/클라이언트 불일치 방지: 마운트 전에는 로딩 표시
+    if (!isMounted || isLoading) {
         return (
             <div className="flex items-center justify-center min-h-[60vh]">
                 <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>

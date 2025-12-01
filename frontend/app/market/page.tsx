@@ -10,12 +10,16 @@ import { ArrowDown, ArrowUp, ArrowUpDown, ExternalLink, Search, TrendingUp, Tren
 import { useMarkets } from "@/hooks/queries/useMarkets"
 import { useFilterStore } from "@/stores"
 import { LoadingSpinner } from "@/components/common"
+import { useIsMounted } from "@/hooks/useIsMounted"
 import type { MarketData } from "@/types"
 
 type SortKey = 'name' | 'price' | 'changeRate' | 'changePrice' | 'tradePrice' | 'tradeVolume'
 type SortOrder = 'asc' | 'desc'
 
 export default function MarketPage() {
+  // 클라이언트 마운트 확인 (Hydration mismatch 방지)
+  const isMounted = useIsMounted()
+  
   // React Query로 실시간 시세 조회 (WebSocket 자동 연결)
   const { data: markets = [], isLoading } = useMarkets()
   
@@ -302,7 +306,7 @@ export default function MarketPage() {
     )
   }
 
-  if (isLoading) {
+  if (!isMounted || isLoading) {
     return <LoadingSpinner />
   }
 
