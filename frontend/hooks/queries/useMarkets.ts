@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { getMarketList } from '@/app/api/market'
 import { queryKeys } from '@/lib/utils/queryKeys'
 import { useWebSocketStore } from '@/stores'
@@ -20,6 +20,7 @@ import { useWebSocketStore } from '@/stores'
 export const useMarkets = () => {
   const incrementSubscribers = useWebSocketStore(state => state.incrementSubscribers)
   const decrementSubscribers = useWebSocketStore(state => state.decrementSubscribers)
+  const mounted = useRef(false)
   
   const query = useQuery({
     queryKey: queryKeys.markets.list(),
@@ -28,17 +29,20 @@ export const useMarkets = () => {
     gcTime: Infinity,
   })
   
-  // 마운트/언마운트 시에만 구독자 관리 (빈 의존성)
   useEffect(() => {
-    incrementSubscribers()
-    console.log('[useMarkets] Subscriber registered')
+    if (!mounted.current) {
+      mounted.current = true
+      incrementSubscribers()
+    }
     
     return () => {
-      decrementSubscribers()
-      console.log('[useMarkets] Subscriber unregistered')
+      if (mounted.current) {
+        mounted.current = false
+        decrementSubscribers()
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []) // 빈 의존성 - 마운트/언마운트 시에만 실행
+  }, [])
   
   return query
 }

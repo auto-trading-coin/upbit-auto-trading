@@ -77,12 +77,12 @@ export default function MarketPage() {
           compareB = b.currentPrice
           break
         case 'changeRate':
-          compareA = a.changeRate
-          compareB = b.changeRate
+          compareA = a.change === 'RISE' ? a.changeRate : a.change === 'FALL' ? -a.changeRate : 0
+          compareB = b.change === 'RISE' ? b.changeRate : b.change === 'FALL' ? -b.changeRate : 0
           break
         case 'changePrice':
-          compareA = a.changePrice
-          compareB = b.changePrice
+          compareA = a.change === 'RISE' ? a.changePrice : a.change === 'FALL' ? -a.changePrice : 0
+          compareB = b.change === 'RISE' ? b.changePrice : b.change === 'FALL' ? -b.changePrice : 0
           break
         case 'tradePrice':
           compareA = a.accTradePrice24h
@@ -270,7 +270,7 @@ export default function MarketPage() {
                     : ""
                 }
               >
-                {item.changeRate > 0 ? '+' : ''}{item.changeRate.toFixed(2)}%
+                {item.change === 'RISE' ? '+' : item.change === 'FALL' ? '-' : ''}{item.changeRate.toFixed(2)}%
               </span>
             </div>
             <div
@@ -282,7 +282,7 @@ export default function MarketPage() {
                   : ""
               }`}
             >
-              {item.changePrice > 0 ? '+' : ''}{item.changePrice.toLocaleString()}
+              {item.change === 'RISE' ? '+' : item.change === 'FALL' ? '-' : ''}{item.changePrice.toLocaleString()}
             </div>
             <div className="text-right text-sm">
               {formatPrice(item.accTradePrice24h)}
