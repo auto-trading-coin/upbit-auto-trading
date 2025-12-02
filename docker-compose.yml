@@ -24,7 +24,7 @@ services:
             CRYPTO_SECRET_KEY: ${CRYPTO_SECRET_KEY}
 
         expose:
-            - "8080"
+            - '8080'
         networks:
             - app_net
 
@@ -34,14 +34,14 @@ services:
             context: ./frontend
             dockerfile: Dockerfile
             args:
-            NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL}
+                NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL}
         image: frontend
 
         environment:
             NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL}
 
         expose:
-            - "3000"
+            - '3000'
         networks:
             - app_net
 
@@ -65,7 +65,7 @@ services:
             TZ: Asia/Seoul
 
         expose:
-            - "8000"
+            - '8000'
         networks:
             - app_net
 
