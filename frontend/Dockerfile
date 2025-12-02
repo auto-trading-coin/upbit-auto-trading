@@ -17,4 +17,4 @@ RUN npm run build
 # 3000 포트 노출
 EXPOSE 3000
 
-CMD ["npm", "run", "dev"]
+CMD ["npm", "run", "start"]
