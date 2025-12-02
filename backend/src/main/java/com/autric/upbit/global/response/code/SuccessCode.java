@@ -38,6 +38,7 @@ public enum SuccessCode implements ResponseCode {
      */
     REGISTER_UPBIT_API_KEY_SUCCESS(HttpStatus.CREATED, "업비트 API KEY 등록에 성공했습니다."),
     UPBIT_MARKETS_SUCCESS(HttpStatus.OK, "업비트 Market 정보 조회에 성공했습니다."),
+    UPBIT_ACCOUNTS_SUCCESS(HttpStatus.OK, "업비트 계좌 정보 조회에 성공했습니다."),
     /*
      * Strategy
      */

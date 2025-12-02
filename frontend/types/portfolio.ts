@@ -6,9 +6,18 @@
 export interface Holding {
   market: string
   koreanName: string
-  amount: number
+  amount: number           // 총 보유량 (balance + locked)
+  lockedAmount?: number    // 주문 중 묶인 수량
   avgBuyPrice: number
   currentPrice: number
+}
+
+/**
+ * 포트폴리오 API 응답 데이터
+ */
+export interface PortfolioData {
+  holdings: Holding[]      // 보유 코인 목록
+  cashBalance: number      // KRW 잔고
 }
 
 export interface Portfolio {
