@@ -1,73 +1,56 @@
 /**
- * Formatting utility functions
+ * 숫자 포맷팅 유틸리티
  */
 
 /**
- * 가격을 한글 단위로 포맷팅
- * @example formatPrice(1500000) => "150만원"
+ * 통화 포맷팅 (원화)
+ * @param value 숫자 값
+ * @param showSign 부호 표시 여부 (기본: false)
+ * @returns 포맷팅된 문자열 (예: "1,234,567원", "+1,234원")
  */
-export const formatPrice = (price: number): string => {
-  if (price >= 1000000) {
-    return `${(price / 1000000).toLocaleString(undefined, { maximumFractionDigits: 2 })}백만원`
-  } else if (price >= 1000) {
-    return `${(price / 1000).toLocaleString(undefined, { maximumFractionDigits: 2 })}천원`
-  } else {
-    return `${price.toLocaleString()}원`
-  }
+export const formatCurrency = (value: number, showSign = false): string => {
+  const formatted = value.toLocaleString(undefined, { maximumFractionDigits: 0 })
+  const sign = showSign && value > 0 ? '+' : ''
+  return `${sign}${formatted}원`
 }
 
 /**
- * 거래량을 축약 표기로 포맷팅
- * @example formatVolume(1500000000) => "1.5B"
+ * 퍼센트 포맷팅
+ * @param value 숫자 값 (예: 5.25 = 5.25%)
+ * @param showSign 부호 표시 여부 (기본: true)
+ * @param decimals 소수점 자릿수 (기본: 2)
+ * @returns 포맷팅된 문자열 (예: "+5.25%", "-3.10%")
  */
-export const formatVolume = (volume: number): string => {
-  if (volume >= 1000000000) {
-    return `${(volume / 1000000000).toLocaleString(undefined, { maximumFractionDigits: 2 })}B`
-  } else if (volume >= 1000000) {
-    return `${(volume / 1000000).toLocaleString(undefined, { maximumFractionDigits: 2 })}M`
-  } else if (volume >= 1000) {
-    return `${(volume / 1000).toLocaleString(undefined, { maximumFractionDigits: 2 })}K`
-  } else {
-    return volume.toLocaleString()
-  }
+export const formatPercent = (value: number, showSign = true, decimals = 2): string => {
+  const sign = showSign && value > 0 ? '+' : ''
+  return `${sign}${value.toFixed(decimals)}%`
 }
 
 /**
- * ISO 날짜 문자열을 "YYYY-MM-DD HH:mm" 형식으로 포맷팅
- * @example formatDate("2023-06-15T09:30:00Z") => "2023-06-15 09:30"
+ * 수량 포맷팅 (최대 8자리 소수점)
+ * @param value 숫자 값
+ * @returns 포맷팅된 문자열
  */
-export const formatDate = (dateString: string): string => {
-  const date = new Date(dateString)
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
+export const formatAmount = (value: number): string => {
+  return value.toLocaleString(undefined, { maximumFractionDigits: 8 })
 }
 
 /**
- * 변동률을 포맷팅 (부호 포함)
- * @example formatChangeRate(0.025) => "+2.50%"
+ * 손익에 따른 색상 클래스 반환
+ * @param value 손익 값
+ * @returns Tailwind CSS 클래스
  */
-export const formatChangeRate = (rate: number, showSign: boolean = true): string => {
-  const formatted = `${(rate * 100).toFixed(2)}%`
-  if (showSign && rate > 0) {
-    return `+${formatted}`
-  }
-  return formatted
+export const getProfitColorClass = (value: number): string => {
+  if (value > 0) return 'text-red-500'
+  if (value < 0) return 'text-blue-500'
+  return ''
 }
 
 /**
- * 숫자를 천단위 콤마로 포맷팅
- * @example formatNumber(1000000) => "1,000,000"
+ * 손익 여부 확인
+ * @param value 손익 값
+ * @returns 수익이면 true
  */
-export const formatNumber = (num: number, fractionDigits: number = 0): string => {
-  return num.toLocaleString(undefined, { 
-    minimumFractionDigits: fractionDigits,
-    maximumFractionDigits: fractionDigits 
-  })
-}
-
-/**
- * 원화 표시 (천단위 콤마 + "원")
- * @example formatKRW(1000000) => "1,000,000원"
- */
-export const formatKRW = (amount: number): string => {
-  return `${amount.toLocaleString()}원`
+export const isProfit = (value: number): boolean => {
+  return value >= 0
 }
