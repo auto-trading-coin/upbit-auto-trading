@@ -11,7 +11,11 @@ RUN npm install
 # 앱 소스 복사
 COPY . .
 
-# 앱 빌드
+# 빌드 시 환경 변수 주입 (ARG)
+ARG NEXT_PUBLIC_API_BASE_URL
+ENV NEXT_PUBLIC_API_BASE_URL=$NEXT_PUBLIC_API_BASE_URL
+
+# 앱 빌드 (환경 변수가 코드에 주입됨)
 RUN npm run build
 
 # 3000 포트 노출
