@@ -1,11 +1,12 @@
+version: '3.9'
+
 services:
     backend:
-        container_name: backend
+        container_name: backend-${COLOR}
         build:
             context: ./backend
             dockerfile: Dockerfile
         image: backend
-
         environment:
             SPRING_PROFILES_ACTIVE: prod
             TZ: Asia/Seoul
@@ -22,36 +23,36 @@ services:
             KAKAO_CLIENT_ID: ${KAKAO_CLIENT_ID}
             KAKAO_CLIENT_SECRET: ${KAKAO_CLIENT_SECRET}
             CRYPTO_SECRET_KEY: ${CRYPTO_SECRET_KEY}
-
         expose:
             - '8080'
         networks:
-            - app_net
+            app_net:
+                aliases:
+                    - backend-${COLOR}
 
     frontend:
-        container_name: frontend
+        container_name: frontend-${COLOR}
         build:
             context: ./frontend
             dockerfile: Dockerfile
             args:
                 NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL}
         image: frontend
-
         environment:
             NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL}
-
         expose:
             - '3000'
         networks:
-            - app_net
+            app_net:
+                aliases:
+                    - frontend-${COLOR}
 
     fastapi:
-        container_name: fastapi
+        container_name: fastapi-${COLOR}
         build:
             context: ./strategy_fastapi
             dockerfile: Dockerfile
         image: fastapi
-
         environment:
             REDIS_URL: ${REDIS_URL}
             REDIS_SCAN_COUNT: ${REDIS_SCAN_COUNT}
@@ -63,11 +64,12 @@ services:
             APP_NAME: ${APP_NAME}
             APP_VERSION: ${APP_VERSION}
             TZ: Asia/Seoul
-
         expose:
             - '8000'
         networks:
-            - app_net
+            app_net:
+                aliases:
+                    - fastapi-${COLOR}
 
 networks:
     app_net:
