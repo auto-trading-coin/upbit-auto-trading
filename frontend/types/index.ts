@@ -17,5 +17,14 @@ export * from './market'
 // Portfolio types
 export * from './portfolio'
 
+// Investment Profit types
+export * from './investment'
+
+// Investment Profit types
+export * from './investment'
+
+// Investment Profit types
+export * from './investment'
+
 // API types
 export * from './api'

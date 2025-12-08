@@ -8,18 +8,34 @@ import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import {
-  Calendar,
   DollarSign,
   Key,
   LineChart,
   Wallet,
+  Info,
 } from "lucide-react"
-import { AuthGuard } from "@/components/common"
-import { HoldingsTable } from "@/components/portfolio"
+import { AuthGuard, LoadingSpinner } from "@/components/common"
+import { 
+  HoldingsTable, 
+  InvestmentProfitHeader,
+  InvestmentProfitChart,
+  DailyProfitTable,
+  MonthlyProfitTable,
+  YearlyProfitTable,
+  TradingMetricsCard,
+} from "@/components/portfolio"
 import { useUser } from "@/hooks/queries/useUser"
 import { usePortfolioCalculation } from "@/hooks/usePortfolioCalculation"
+import { 
+  useDailyProfit, 
+  useMonthlyProfit, 
+  useYearlyProfit,
+  useTradingMetrics,
+  useAvailableYears,
+} from "@/hooks/queries/useInvestmentProfit"
 import { useIsMounted } from "@/hooks/useIsMounted"
 import { formatCurrency, formatPercent, formatAmount, getProfitColorClass } from "@/lib/utils/format"
+import type { InvestmentPeriodType, ProfitChartData } from "@/types"
 
 // 타입 정의
 interface ChartDataItem {
@@ -29,51 +45,6 @@ interface ChartDataItem {
   rawValue: number
   color: string
 }
-
-interface AssetHistoryItem {
-  date: string
-  totalAsset: number
-  cashBalance: number
-  coinValue: number
-  dailyChange: number
-}
-
-interface PeriodHistoryItem {
-  period: string
-  totalAsset: number
-  cashBalance: number
-  coinValue: number
-  change: number
-}
-
-// 더미 자산 변동 내역 데이터 (히스토리는 백엔드 API 필요)
-const dummyAssetHistory: AssetHistoryItem[] = [
-  { date: "2023-06-21", totalAsset: 1250000, cashBalance: 500000, coinValue: 750000, dailyChange: 1.21 },
-  { date: "2023-06-20", totalAsset: 1235000, cashBalance: 450000, coinValue: 785000, dailyChange: -0.4 },
-  { date: "2023-06-19", totalAsset: 1240000, cashBalance: 450000, coinValue: 790000, dailyChange: 0.81 },
-  { date: "2023-06-18", totalAsset: 1230000, cashBalance: 450000, coinValue: 780000, dailyChange: 1.65 },
-  { date: "2023-06-17", totalAsset: 1210000, cashBalance: 450000, coinValue: 760000, dailyChange: -0.82 },
-  { date: "2023-06-16", totalAsset: 1220000, cashBalance: 450000, coinValue: 770000, dailyChange: 1.67 },
-  { date: "2023-06-15", totalAsset: 1200000, cashBalance: 450000, coinValue: 750000, dailyChange: 2.5 },
-]
-
-const dummyWeeklyHistory: PeriodHistoryItem[] = [
-  { period: "2023-06-15 ~ 2023-06-21", totalAsset: 1250000, cashBalance: 500000, coinValue: 750000, change: 5.93 },
-  { period: "2023-06-08 ~ 2023-06-14", totalAsset: 1180000, cashBalance: 420000, coinValue: 760000, change: 2.61 },
-  { period: "2023-06-01 ~ 2023-06-07", totalAsset: 1150000, cashBalance: 400000, coinValue: 750000, change: 3.5 },
-]
-
-const dummyMonthlyHistory: PeriodHistoryItem[] = [
-  { period: "2023-06", totalAsset: 1250000, cashBalance: 500000, coinValue: 750000, change: 5.93 },
-  { period: "2023-05", totalAsset: 1180000, cashBalance: 420000, coinValue: 760000, change: 7.27 },
-  { period: "2023-04", totalAsset: 1100000, cashBalance: 350000, coinValue: 750000, change: 10.0 },
-]
-
-const dummyYearlyHistory: PeriodHistoryItem[] = [
-  { period: "2023", totalAsset: 1250000, cashBalance: 500000, coinValue: 750000, change: 25.0 },
-  { period: "2022", totalAsset: 1000000, cashBalance: 300000, coinValue: 700000, change: 25.0 },
-  { period: "2021", totalAsset: 800000, cashBalance: 200000, coinValue: 600000, change: 60.0 },
-]
 
 // 색상 배열
 const CHART_COLORS = [
@@ -106,12 +77,88 @@ export default function PortfolioPage() {
     isLoading: portfolioLoading,
   } = usePortfolioCalculation()
   
-  const [historyPeriod, setHistoryPeriod] = useState<string>("daily")
+  // 투자손익 관련 상태
+  const currentDate = new Date()
+  const [periodType, setPeriodType] = useState<InvestmentPeriodType>('daily')
+  const [selectedYear, setSelectedYear] = useState(currentDate.getFullYear())
+  const [selectedMonth, setSelectedMonth] = useState(currentDate.getMonth() + 1)
   const [hoveredSegment, setHoveredSegment] = useState<string | null>(null)
   const router = useRouter()
+  
+  // 투자손익 데이터 조회
+  const { data: availableYears = [] } = useAvailableYears()
+  const { data: dailyData, isLoading: dailyLoading } = useDailyProfit(selectedYear, selectedMonth)
+  const { data: monthlyData, isLoading: monthlyLoading } = useMonthlyProfit(selectedYear)
+  const { data: yearlyData, isLoading: yearlyLoading } = useYearlyProfit()
+  const { data: tradingMetrics, isLoading: metricsLoading } = useTradingMetrics()
+
+  // 월 목록 생성
+  const months = useMemo(() => {
+    const currentYear = currentDate.getFullYear()
+    const currentMonth = currentDate.getMonth() + 1
+    
+    if (selectedYear === currentYear) {
+      return Array.from({ length: currentMonth }, (_, i) => i + 1)
+    }
+    return Array.from({ length: 12 }, (_, i) => i + 1)
+  }, [selectedYear, currentDate])
+
+  // 기간 라벨 생성
+  const periodLabel = useMemo(() => {
+    if (periodType === 'daily' && dailyData?.summary) {
+      const { periodStart, periodEnd } = dailyData.summary
+      return `${periodStart.replace(/-/g, '년 ').replace(/-/, '월 ')}일 ~ ${periodEnd.replace(/-/g, '년 ').replace(/-/, '월 ')}일`
+    }
+    if (periodType === 'monthly' && monthlyData?.summary) {
+      return `${selectedYear}년`
+    }
+    if (periodType === 'yearly' && yearlyData?.summary) {
+      return '전체 연도'
+    }
+    return ''
+  }, [periodType, dailyData, monthlyData, yearlyData, selectedYear])
+
+  // 차트 데이터 변환
+  const chartData = useMemo((): ProfitChartData[] => {
+    if (periodType === 'daily' && dailyData?.items) {
+      return dailyData.items.map(item => ({
+        label: item.date.split('-').slice(1).join('.'), // MM.DD
+        cumulativeRate: item.cumulativeProfitRate,
+        profitLoss: item.dailyProfitLoss,
+      }))
+    }
+    if (periodType === 'monthly' && monthlyData?.items) {
+      return monthlyData.items.map(item => ({
+        label: `${item.month}월`,
+        cumulativeRate: item.cumulativeProfitRate,
+        profitLoss: item.monthlyProfitLoss,
+      }))
+    }
+    if (periodType === 'yearly' && yearlyData?.items) {
+      return yearlyData.items.map(item => ({
+        label: `${item.year}`,
+        cumulativeRate: item.cumulativeProfitRate,
+        profitLoss: item.yearlyProfitLoss,
+      }))
+    }
+    return []
+  }, [periodType, dailyData, monthlyData, yearlyData])
+
+  // 월 클릭 핸들러 (월별 → 일별 드릴다운)
+  const handleMonthClick = useCallback((year: number, month: number) => {
+    setSelectedYear(year)
+    setSelectedMonth(month)
+    setPeriodType('daily')
+  }, [])
+
+  // 연도 클릭 핸들러 (연도별 → 월별 드릴다운)
+  const handleYearClick = useCallback((year: number) => {
+    setSelectedYear(year)
+    setPeriodType('monthly')
+  }, [])
 
   // 파이 차트 데이터 준비
-  const chartData = useMemo((): ChartDataItem[] => {
+  const pieChartData = useMemo((): ChartDataItem[] => {
     if (totalAsset === 0) return []
 
     const data: ChartDataItem[] = []
@@ -144,31 +191,15 @@ export default function PortfolioPage() {
     return data
   }, [totalAsset, cashBalance, holdingsWithPrice])
 
-  // 선택된 기간에 따른 자산 변동 내역 데이터 가져오기
-  const getHistoryData = useCallback(() => {
-    switch (historyPeriod) {
-      case "daily":
-        return dummyAssetHistory
-      case "weekly":
-        return dummyWeeklyHistory
-      case "monthly":
-        return dummyMonthlyHistory
-      case "yearly":
-        return dummyYearlyHistory
-      default:
-        return dummyAssetHistory
-    }
-  }, [historyPeriod])
-
-  const historyData = getHistoryData()
+  // 투자손익 데이터 로딩 상태
+  const investmentLoading = periodType === 'daily' ? dailyLoading 
+    : periodType === 'monthly' ? monthlyLoading 
+    : periodType === 'yearly' ? yearlyLoading 
+    : metricsLoading
 
   // 로딩 상태
   if (!isMounted || userLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
-      </div>
-    )
+    return <LoadingSpinner />
   }
 
   return (
@@ -224,9 +255,10 @@ export default function PortfolioPage() {
             <TabsList>
               <TabsTrigger value="portfolio">포트폴리오</TabsTrigger>
               <TabsTrigger value="holdings">보유 자산</TabsTrigger>
-              <TabsTrigger value="history">자산 변동 내역</TabsTrigger>
+              <TabsTrigger value="history">투자손익</TabsTrigger>
             </TabsList>
 
+            {/* 포트폴리오 탭 */}
             <TabsContent value="portfolio" className="space-y-6">
               {portfolioLoading ? (
                 <div className="flex items-center justify-center py-12">
@@ -272,17 +304,21 @@ export default function PortfolioPage() {
 
                     <Card>
                       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">일일 수익률</CardTitle>
+                        <CardTitle className="text-sm font-medium">평가 손익</CardTitle>
                         <LineChart className="h-4 w-4 text-muted-foreground" />
                       </CardHeader>
                       <CardContent>
-                        <div className="text-2xl font-bold text-muted-foreground">-</div>
-                        <p className="text-xs text-muted-foreground mt-2">추후 구현 예정</p>
+                        <div className={`text-2xl font-bold ${getProfitColorClass(totalProfitAmount)}`}>
+                          {formatCurrency(totalProfitAmount, true)}
+                        </div>
+                        <p className={`text-xs mt-2 ${getProfitColorClass(totalProfitRate)}`}>
+                          {formatPercent(totalProfitRate)}
+                        </p>
                       </CardContent>
                     </Card>
                   </div>
 
-                  {/* 손익 현황 카드 (공통 컴포넌트와 다른 레이아웃) */}
+                  {/* 손익 현황 카드 */}
                   <Card>
                     <CardHeader>
                       <CardTitle>손익 현황</CardTitle>
@@ -314,13 +350,14 @@ export default function PortfolioPage() {
                     </CardContent>
                   </Card>
 
+                  {/* 자산 분포 차트 */}
                   <Card>
                     <CardHeader>
                       <CardTitle>자산 분포</CardTitle>
                       <CardDescription>현재 보유 중인 자산의 분포 비율</CardDescription>
                     </CardHeader>
                     <CardContent>
-                      {chartData.length === 0 ? (
+                      {pieChartData.length === 0 ? (
                         <div className="flex flex-col items-center justify-center py-8 text-center">
                           <Wallet className="h-10 w-10 text-muted-foreground mb-4" />
                           <h3 className="text-lg font-medium">보유 자산이 없습니다</h3>
@@ -339,11 +376,10 @@ export default function PortfolioPage() {
                             <svg width="100%" height="100%" viewBox="0 0 100 100">
                               <circle cx="50" cy="50" r="40" fill="white" stroke="#e2e8f0" strokeWidth="1" />
 
-                              {/* 파이 차트 섹션들 */}
                               {(() => {
                                 let cumulativePercentage = 0
 
-                                return chartData.map((item, index) => {
+                                return pieChartData.map((item, index) => {
                                   const startAngle = cumulativePercentage * 3.6
                                   cumulativePercentage += item.value
                                   const endAngle = cumulativePercentage * 3.6
@@ -389,14 +425,13 @@ export default function PortfolioPage() {
                                 })
                               })()}
 
-                              {/* 내부 원 (도넛 모양을 위한) */}
                               <circle cx="50" cy="50" r="25" fill="white" />
                             </svg>
                           </div>
 
                           {/* 자산 목록 */}
                           <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-3">
-                            {chartData.map((item, index) => {
+                            {pieChartData.map((item, index) => {
                               const holding = holdingsWithPrice.find(
                                 h => h.market.replace("KRW-", "") === item.name
                               )
@@ -430,6 +465,7 @@ export default function PortfolioPage() {
               )}
             </TabsContent>
 
+            {/* 보유 자산 탭 */}
             <TabsContent value="holdings" className="space-y-4">
               <Card>
                 <CardHeader>
@@ -451,7 +487,6 @@ export default function PortfolioPage() {
                     </div>
                   ) : (
                     <div className="space-y-4">
-                      {/* 보유 자산 테이블 (공통 컴포넌트 사용) */}
                       <HoldingsTable
                         holdings={holdingsWithPrice}
                         totalBuyAmount={coinTotalBuyAmount}
@@ -461,7 +496,7 @@ export default function PortfolioPage() {
                         emptySubMessage="코인을 매수하면 이곳에 표시됩니다"
                       />
                       
-                      {/* 원화 + 총합 행 (별도 표시) */}
+                      {/* 원화 + 총합 행 */}
                       <div className="rounded-md border">
                         <div className="grid grid-cols-7 gap-4 p-4 bg-muted/30">
                           <div className="font-medium">원화 (KRW)</div>
@@ -490,59 +525,171 @@ export default function PortfolioPage() {
               </Card>
             </TabsContent>
 
+            {/* 투자손익 탭 */}
             <TabsContent value="history" className="space-y-4">
-              <Card>
-                <CardHeader>
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                    <div>
-                      <CardTitle>자산 변동 내역</CardTitle>
-                      <CardDescription>기간별 자산 변동 내역을 확인합니다. (추후 구현 예정)</CardDescription>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Calendar className="h-4 w-4 text-muted-foreground" />
-                      <Select value={historyPeriod} onValueChange={setHistoryPeriod}>
-                        <SelectTrigger className="w-[120px]">
-                          <SelectValue placeholder="기간 선택" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="daily">일별</SelectItem>
-                          <SelectItem value="weekly">주별</SelectItem>
-                          <SelectItem value="monthly">월별</SelectItem>
-                          <SelectItem value="yearly">연도별</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="rounded-md border">
-                    <div className="grid grid-cols-5 gap-4 p-4 font-medium text-sm bg-muted/50">
-                      <div>기간</div>
-                      <div className="text-right">총 자산</div>
-                      <div className="text-right">원화 보유액</div>
-                      <div className="text-right">코인 평가액</div>
-                      <div className="text-right">변동률</div>
-                    </div>
-                    {historyData.map((item, index) => {
-                      const change = "change" in item ? item.change : "dailyChange" in item ? item.dailyChange : 0
+              {/* 안내 메시지 */}
+              <div className="flex items-center gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-700">
+                <Info className="h-4 w-4 flex-shrink-0" />
+                <span>투자손익에서 제공하는 정보는 참고용 자료입니다.</span>
+              </div>
 
-                      return (
-                        <div key={index} className="grid grid-cols-5 gap-4 p-4 border-t">
-                          <div>{"period" in item ? item.period : item.date}</div>
-                          <div className="text-right">{formatCurrency(item.totalAsset)}</div>
-                          <div className="text-right">{formatCurrency(item.cashBalance)}</div>
-                          <div className="text-right">{formatCurrency(item.coinValue)}</div>
-                          <div className="text-right">
-                            <span className={getProfitColorClass(change)}>
-                              {formatPercent(change)}
-                            </span>
-                          </div>
-                        </div>
-                      )
-                    })}
+              {/* 기간 선택 탭 + 연월 선택 */}
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                {/* 수익률 계산 방식 선택 (업비트 스타일) */}
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-xs"
+                  >
+                    금액가중수익률
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-xs text-muted-foreground"
+                  >
+                    시간가중수익률
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-xs text-muted-foreground"
+                  >
+                    단순수익률
+                  </Button>
+                </div>
+
+                {/* 기간 타입 + 연월 선택 */}
+                <div className="flex items-center gap-2">
+                  <div className="flex rounded-lg border overflow-hidden">
+                    <button
+                      className={`px-3 py-1.5 text-sm transition-colors ${
+                        periodType === 'daily' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'
+                      }`}
+                      onClick={() => setPeriodType('daily')}
+                    >
+                      일별
+                    </button>
+                    <button
+                      className={`px-3 py-1.5 text-sm transition-colors border-l ${
+                        periodType === 'monthly' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'
+                      }`}
+                      onClick={() => setPeriodType('monthly')}
+                    >
+                      월별
+                    </button>
+                    <button
+                      className={`px-3 py-1.5 text-sm transition-colors border-l ${
+                        periodType === 'yearly' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'
+                      }`}
+                      onClick={() => setPeriodType('yearly')}
+                    >
+                      연도별
+                    </button>
+                    <button
+                      className={`px-3 py-1.5 text-sm transition-colors border-l ${
+                        periodType === 'all' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'
+                      }`}
+                      onClick={() => setPeriodType('all')}
+                    >
+                      전체
+                    </button>
                   </div>
-                </CardContent>
-              </Card>
+
+                  {/* 연도 선택 */}
+                  {(periodType === 'daily' || periodType === 'monthly') && (
+                    <Select 
+                      value={String(selectedYear)} 
+                      onValueChange={(v) => setSelectedYear(Number(v))}
+                    >
+                      <SelectTrigger className="w-[120px]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {(availableYears.length > 0 ? availableYears : [currentDate.getFullYear()]).map(year => (
+                          <SelectItem key={year} value={String(year)}>
+                            {year}년
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+
+                  {/* 월 선택 (일별 보기일 때만) */}
+                  {periodType === 'daily' && (
+                    <Select 
+                      value={String(selectedMonth)} 
+                      onValueChange={(v) => setSelectedMonth(Number(v))}
+                    >
+                      <SelectTrigger className="w-[100px]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {months.map(month => (
+                          <SelectItem key={month} value={String(month)}>
+                            {month}월
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                </div>
+              </div>
+
+              {investmentLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
+                </div>
+              ) : periodType === 'all' ? (
+                /* 전체 기간 - 트레이딩 지표 */
+                tradingMetrics && <TradingMetricsCard metrics={tradingMetrics} />
+              ) : (
+                /* 일별/월별/연도별 투자손익 */
+                <div className="space-y-4">
+                  {/* 요약 헤더 */}
+                  {periodType === 'daily' && dailyData?.summary && (
+                    <InvestmentProfitHeader 
+                      summary={dailyData.summary} 
+                      periodLabel={periodLabel}
+                    />
+                  )}
+                  {periodType === 'monthly' && monthlyData?.summary && (
+                    <InvestmentProfitHeader 
+                      summary={monthlyData.summary} 
+                      periodLabel={periodLabel}
+                    />
+                  )}
+                  {periodType === 'yearly' && yearlyData?.summary && (
+                    <InvestmentProfitHeader 
+                      summary={yearlyData.summary} 
+                      periodLabel={periodLabel}
+                    />
+                  )}
+
+                  {/* 차트 */}
+                  {chartData.length > 0 && (
+                    <InvestmentProfitChart data={chartData} />
+                  )}
+
+                  {/* 상세 테이블 */}
+                  {periodType === 'daily' && dailyData?.items && (
+                    <DailyProfitTable items={dailyData.items} />
+                  )}
+                  {periodType === 'monthly' && monthlyData?.items && (
+                    <MonthlyProfitTable 
+                      items={monthlyData.items} 
+                      onMonthClick={handleMonthClick}
+                    />
+                  )}
+                  {periodType === 'yearly' && yearlyData?.items && (
+                    <YearlyProfitTable 
+                      items={yearlyData.items}
+                      onYearClick={handleYearClick}
+                    />
+                  )}
+                </div>
+              )}
             </TabsContent>
           </Tabs>
         )}
