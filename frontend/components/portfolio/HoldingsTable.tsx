@@ -99,9 +99,9 @@ export function HoldingsTable({
             </div>
             <div className="text-right">
               <div className="font-medium">{formatAmount(holding.amount)}</div>
-              {holding.lockedAmount && holding.lockedAmount > 0 && (
+              {(holding.lockedAmount ?? 0) > 0 && (
                 <div className="text-xs text-muted-foreground">
-                  (주문중: {formatAmount(holding.lockedAmount)})
+                  (주문중: {formatAmount(holding.lockedAmount!)})
                 </div>
               )}
             </div>
