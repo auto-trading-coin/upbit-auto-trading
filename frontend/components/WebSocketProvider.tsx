@@ -36,7 +36,7 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
   const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const isConnectingRef = useRef(false)
   const queryClient = useQueryClient()
-  
+
   const subscriberCount = useWebSocketStore(state => state.subscriberCount)
   const setConnected = useWebSocketStore(state => state.setConnected)
   const setReconnecting = useWebSocketStore(state => state.setReconnecting)
@@ -50,7 +50,6 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
         { type: 'ticker', codes },
       ]
       ws.send(JSON.stringify(subscribeMessage))
-      console.log(`[WebSocket] Subscribed: ${codes.length} markets`)
     }
   }, [])
 
@@ -61,50 +60,48 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
       clearTimeout(disconnectTimeoutRef.current)
       disconnectTimeoutRef.current = null
     }
-    
+
     if (isConnectingRef.current) {
       return
     }
-    
+
     // 이미 연결되어 있으면 구독만 전송
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       sendSubscribeMessage(wsRef.current, codes)
       return
     }
-    
+
     if (codes.length === 0) {
       return
     }
-    
+
     isConnectingRef.current = true
-    console.log('[WebSocket] Connecting...')
-    
+
     const ws = new WebSocket(WS_URL)
     wsRef.current = ws
-    
+
     ws.onopen = () => {
-      console.log('[WebSocket] Connected')
       isConnectingRef.current = false
       setConnected(true)
       setReconnecting(false)
       setError(null)
       sendSubscribeMessage(ws, codes)
     }
-    
+
     ws.onmessage = async (event) => {
       try {
         const blob = event.data as Blob
         const text = await blob.text()
         const data: UpbitWebSocketTicker = JSON.parse(text)
-        
+
         if (data.type !== 'ticker') return
-        
+
         // React Query 캐시 업데이트
         queryClient.setQueryData(
           queryKeys.markets.list(),
           (oldData: MarketData[] | undefined) => {
             if (!oldData) return oldData
-            
+
             return oldData.map(item => {
               if (item.market === data.code) {
                 return {
@@ -125,21 +122,19 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
         console.error('[WebSocket] Parse error:', error)
       }
     }
-    
+
     ws.onerror = () => {
       isConnectingRef.current = false
       setError('WebSocket 연결 오류')
     }
-    
+
     ws.onclose = () => {
-      console.log('[WebSocket] Closed')
       isConnectingRef.current = false
       setConnected(false)
-      
+
       // 구독자가 있으면 재연결
       const currentSubscriberCount = useWebSocketStore.getState().subscriberCount
       if (currentSubscriberCount > 0) {
-        console.log('[WebSocket] Reconnecting in 3 seconds...')
         setReconnecting(true)
         reconnectTimeoutRef.current = setTimeout(() => {
           const cachedData = queryClient.getQueryData<MarketData[]>(queryKeys.markets.list())
@@ -168,14 +163,14 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
       clearTimeout(retryTimeoutRef.current)
       retryTimeoutRef.current = null
     }
-    
+
     if (subscriberCount > 0) {
       // 연결 해제 예약 취소
       if (disconnectTimeoutRef.current) {
         clearTimeout(disconnectTimeoutRef.current)
         disconnectTimeoutRef.current = null
       }
-      
+
       // 구독자가 있으면 연결 시도
       if (!tryConnectWithCache()) {
         // 캐시에 데이터가 없으면 500ms 후 재시도
@@ -189,14 +184,13 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
         clearTimeout(reconnectTimeoutRef.current)
         reconnectTimeoutRef.current = null
       }
-      
+
       // 이미 예약되어 있으면 무시
       if (!disconnectTimeoutRef.current) {
         disconnectTimeoutRef.current = setTimeout(() => {
           // 다시 확인: 아직도 구독자가 0인지
           const currentCount = useWebSocketStore.getState().subscriberCount
           if (currentCount === 0 && wsRef.current?.readyState === WebSocket.OPEN) {
-            console.log('[WebSocket] No subscribers, closing connection')
             wsRef.current.close()
           }
           disconnectTimeoutRef.current = null

@@ -71,14 +71,14 @@ export const useWebSocket = () => {
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const isConnectingRef = useRef(false)
   const queryClient = useQueryClient()
-  
+
   const {
     subscriptions,
     setConnected,
     setReconnecting,
     setError,
   } = useWebSocketStore()
-  
+
   // ✨ 구독 메시지 전송 함수 (재사용)
   const sendSubscribeMessage = useCallback((ws: WebSocket, codes: string[]) => {
     if (ws.readyState === WebSocket.OPEN && codes.length > 0) {
@@ -89,59 +89,56 @@ export const useWebSocket = () => {
           codes,
         },
       ]
-      
+
       ws.send(JSON.stringify(subscribeMessage))
-      console.log(`[WebSocket] Subscribed: ${codes.length} markets`)
     }
   }, [])
-  
+
   // ✨ WebSocket 연결 함수 (재사용)
   const connect = useCallback(() => {
     // 이미 연결 중이거나 연결되어 있으면 무시
     if (isConnectingRef.current || wsRef.current?.readyState === WebSocket.OPEN) {
       return
     }
-    
+
     // 구독할 마켓이 없으면 연결하지 않음
     const codes = Array.from(subscriptions)
     if (codes.length === 0) {
       return
     }
-    
+
     isConnectingRef.current = true
-    console.log('[WebSocket] Connecting...')
-    
+
     // WebSocket 연결
     const ws = new WebSocket(WS_URL)
     wsRef.current = ws
-    
+
     ws.onopen = () => {
-      console.log('[WebSocket] Connected')
       isConnectingRef.current = false
       setConnected(true)
       setReconnecting(false)
       setError(null)
-      
+
       // 구독 메시지 전송
       sendSubscribeMessage(ws, codes)
     }
-    
+
     ws.onmessage = async (event) => {
       try {
         // 업비트는 ArrayBuffer로 응답을 보냄
         const blob = event.data as Blob
         const text = await blob.text()
         const data: UpbitWebSocketTicker = JSON.parse(text)
-        
+
         if (data.type !== 'ticker') return
-        
+
         // React Query 캐시 직접 업데이트
         // 1. 마켓 목록 캐시 업데이트 (한글명/영문명 유지)
         queryClient.setQueryData(
           queryKeys.markets.list(),
           (oldData: MarketData[] | undefined) => {
             if (!oldData) return oldData
-            
+
             return oldData.map(item => {
               if (item.market === data.code) {
                 // ✨ 기존 데이터를 유지하면서 가격 관련 데이터만 업데이트
@@ -159,12 +156,12 @@ export const useWebSocket = () => {
             })
           }
         )
-        
+
         // 2. 개별 마켓 캐시 업데이트 (있는 경우에만)
         const existingDetail = queryClient.getQueryData<MarketData>(
           queryKeys.markets.detail(data.code)
         )
-        
+
         if (existingDetail) {
           queryClient.setQueryData(
             queryKeys.markets.detail(data.code),
@@ -183,56 +180,53 @@ export const useWebSocket = () => {
         console.error('[WebSocket] Parse error:', error)
       }
     }
-    
+
     ws.onerror = (event) => {
       console.error('[WebSocket] Error:', event)
       isConnectingRef.current = false
       setError('WebSocket 연결 오류')
     }
-    
+
     ws.onclose = () => {
-      console.log('[WebSocket] Closed')
       isConnectingRef.current = false
       setConnected(false)
-      
+
       // 구독할 마켓이 남아있으면 3초 후 재연결 시도
       const codes = Array.from(subscriptions)
       if (codes.length > 0) {
-        console.log('[WebSocket] Reconnecting in 3 seconds...')
         setReconnecting(true)
-        
+
         reconnectTimeoutRef.current = setTimeout(() => {
           connect()
         }, 3000)
       }
     }
   }, [subscriptions, queryClient, setConnected, setError, setReconnecting, sendSubscribeMessage])
-  
+
   // ✨ 초기 연결 (한 번만)
   useEffect(() => {
     connect()
-    
+
     // Cleanup
     return () => {
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current)
       }
-      
+
       if (wsRef.current?.readyState === WebSocket.OPEN) {
-        console.log('[WebSocket] Closing connection')
         wsRef.current.close()
       }
-      
+
       setConnected(false)
       setReconnecting(false)
     }
   }, []) // ✨ 의존성 배열 비움 - 초기 마운트 시 한 번만 실행
-  
+
   // ✨ 구독 변경 시 기존 연결에 메시지만 재전송 (재연결 안 함)
   useEffect(() => {
     const ws = wsRef.current
     const codes = Array.from(subscriptions)
-    
+
     // WebSocket이 연결되어 있고 구독할 마켓이 있으면 메시지 재전송
     if (ws?.readyState === WebSocket.OPEN && codes.length > 0) {
       sendSubscribeMessage(ws, codes)
@@ -242,7 +236,7 @@ export const useWebSocket = () => {
       connect()
     }
   }, [subscriptions]) // ✨ subscriptions 변경 시에만 실행 (재연결 안 함)
-  
+
   return {
     send: (data: any) => {
       if (wsRef.current?.readyState === WebSocket.OPEN) {

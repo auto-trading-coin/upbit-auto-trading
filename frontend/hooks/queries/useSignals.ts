@@ -19,12 +19,9 @@ interface UseSignalsOptions {
 }
 
 const getSignals = async (page: number, size: number): Promise<SignalListResponse> => {
-  console.log('🔍 [useSignals] Fetching signals:', { page, size })
   const { data } = await api.get<SuccessResponse<SignalListResponse>>("/signal", {
     params: { page, size },
   })
-  console.log('✅ [useSignals] API Response:', data)
-  console.log('📦 [useSignals] Extracted data:', data.data)
   return data.data || {
     signals: [],
     totalPages: 0,
@@ -38,8 +35,6 @@ const getSignals = async (page: number, size: number): Promise<SignalListRespons
 export const useSignals = (options: UseSignalsOptions = {}) => {
   const { page = 0, size = 10 } = options
   const { data: user } = useUser()
-
-  console.log('🔍 [useSignals] Hook called:', { page, size, apiKeyRegistered: user?.apiKeyRegistered })
 
   return useQuery({
     queryKey: [...queryKeys.signals.list(page), size],

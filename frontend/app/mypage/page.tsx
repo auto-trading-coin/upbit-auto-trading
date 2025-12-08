@@ -22,7 +22,7 @@ export default function MyPage() {
   const { data: tradingStatus } = useTradingStatus()
   const registerMutation = useRegisterApiKey()
   const deleteMutation = useDeleteApiKey()
-  
+
   const [accessKey, setAccessKey] = useState("")
   const [secretKey, setSecretKey] = useState("")
   const [stopLossEnabled, setStopLossEnabled] = useState(true)
@@ -52,7 +52,6 @@ export default function MyPage() {
 
   const handleSaveSettings = async () => {
     // TODO: 백엔드 API 구현 시 실제 mutation으로 교체
-    console.log("Settings saved:", { stopLossEnabled, stopLossLimit })
   }
 
   // API 키 등록/삭제 진행 중 상태

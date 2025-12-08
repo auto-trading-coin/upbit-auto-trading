@@ -45,7 +45,7 @@ export default function StrategiesPage() {
   const { data: strategies = [], isLoading: isLoadingStrategies } = useStrategies()
   const { data: tradingStatus } = useTradingStatus()
   const updateStrategyMutation = useUpdateStrategy()
-  
+
   const [selectedStrategy, setSelectedStrategy] = useState<number | null>(null)
   const [detailStrategy, setDetailStrategy] = useState<Strategy | null>(null)
   const [showDetailDialog, setShowDetailDialog] = useState(false)
@@ -102,7 +102,6 @@ export default function StrategiesPage() {
     }
 
     // TODO: 백엔드 API 구현 시 실제 mutation으로 교체
-    console.log("Settings saved:", settings)
     toast({
       title: "설정이 저장되었습니다",
       duration: 3000,

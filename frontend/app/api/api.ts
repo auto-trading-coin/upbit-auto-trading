@@ -41,14 +41,11 @@ api.interceptors.response.use(
   (res: AxiosResponse) => res,
   async (error: AxiosError) => {
     const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean }
-    
+
     // 401 에러이고 재시도하지 않은 경우
     if (error.response?.status === 401 && !originalRequest._retry) {
-      console.log('[API] 401 에러 발생, 토큰 갱신 시도...')
-      
       if (isRefreshing) {
         // 이미 갱신 중이면 대기
-        console.log('[API] 토큰 갱신 대기 중...')
         return new Promise(resolve => {
           subscribeTokenRefresh(token => {
             originalRequest.headers.Authorization = `Bearer ${token}`
@@ -56,36 +53,33 @@ api.interceptors.response.use(
           })
         })
       }
-      
+
       originalRequest._retry = true
       isRefreshing = true
-      
+
       try {
         // Refresh Token으로 Access Token 재발급
-        console.log('[API] /token 요청 중...')
         const { data } = await axios.get<SuccessResponse<string>>('/token', {
           withCredentials: true,
           baseURL: process.env.NEXT_PUBLIC_API_BASE_URL,
         })
-        
+
         const newAccessToken = data.data!
-        console.log('[API] 토큰 갱신 성공')
         setAccessToken(newAccessToken)
         isRefreshing = false
         onTokenRefreshed(newAccessToken)
-        
+
         // 원래 요청 재시도
         originalRequest.headers.Authorization = `Bearer ${newAccessToken}`
         return api.request(originalRequest)
       } catch (e) {
         // 토큰 갱신 실패 시 로그아웃 처리
-        console.log('[API] 토큰 갱신 실패:', e)
         isRefreshing = false
         refreshSubscribers = []
         removeAccessToken()
       }
     }
-    
+
     return Promise.reject(error)
   }
 )

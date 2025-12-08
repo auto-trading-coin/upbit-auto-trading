@@ -56,13 +56,6 @@ export default function OrdersPage() {
   // 주문 데이터 로드 시 누적
   useEffect(() => {
     if (orderData?.orders) {
-      console.log('📦 Order data received:', {
-        page: currentPage,
-        ordersCount: orderData.orders.length,
-        hasMore: orderData.hasMore,
-        totalElements: orderData.totalElements
-      })
-
       if (currentPage === 0) {
         // 첫 페이지면 초기화
         setAllOrders(orderData.orders)
@@ -88,56 +81,24 @@ export default function OrdersPage() {
 
   // 무한 스크롤 - 주문 로그
   const loadMoreOrders = useCallback(() => {
-    console.log('🔄 loadMoreOrders called:', {
-      isLoadingMoreOrders,
-      hasMoreOrders,
-      isLoadingOrders,
-      currentPage
-    })
-
     if (isLoadingMoreOrders || !hasMoreOrders || isLoadingOrders) {
-      console.log('⛔ Loading blocked:', {
-        isLoadingMoreOrders,
-        hasMoreOrders,
-        isLoadingOrders
-      })
       return
     }
 
-    console.log('✅ Loading next page:', currentPage + 1)
     setIsLoadingMoreOrders(true)
     setCurrentPage(prev => prev + 1)
   }, [isLoadingMoreOrders, hasMoreOrders, isLoadingOrders, currentPage])
 
   // 시그널 데이터 로드 시 누적
   useEffect(() => {
-    console.log('🔍 [Signal Data Effect] Triggered:', {
-      hasSignalData: !!signalData?.signals,
-      signalsCount: signalData?.signals?.length,
-      currentSignalPage,
-      signalData
-    })
-
     if (signalData?.signals) {
-      console.log('📊 [Signal Data] Processing:', {
-        receivedSignals: signalData.signals.length,
-        hasMore: signalData.hasMore,
-        currentPage: signalData.currentPage
-      })
-
       if (currentSignalPage === 0) {
-        console.log('🔄 [Signal Data] Initial load - setting all signals')
         setAllSignals(signalData.signals)
       } else {
         setAllSignals(prev => {
           const newSignals = signalData.signals.filter(
             newSignal => !prev.some(existing => existing.id === newSignal.id)
           )
-          console.log('➕ [Signal Data] Appending new signals:', {
-            previousCount: prev.length,
-            newCount: newSignals.length,
-            totalAfter: prev.length + newSignals.length
-          })
           return [...prev, ...newSignals]
         })
       }
