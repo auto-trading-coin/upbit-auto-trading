@@ -53,7 +53,12 @@ public enum SuccessCode implements ResponseCode {
      * Signals
      */
     SIGNAL_LIST_SUCCESS(HttpStatus.OK, "시그널 목록 조회에 성공했습니다."),
-    SIGNAL_DETAIL_SUCCESS(HttpStatus.OK, "시그널 조회에 성공했습니다.");
+    SIGNAL_DETAIL_SUCCESS(HttpStatus.OK, "시그널 조회에 성공했습니다."),
+
+    /*
+     * Portfolio / Profit
+     */
+    GET_PROFIT_SUCCESS(HttpStatus.OK, "투자손익 조회에 성공했습니다.");
 
     private final HttpStatus httpStatus;
     private final String message;
