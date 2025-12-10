@@ -27,7 +27,7 @@ import java.util.stream.Collectors;
 
 /**
  * 투자손익 관련 비즈니스 로직을 처리하는 서비스
- * 
+ *
  * 주요 기능:
  * - 일별 자산 스냅샷 저장 (스케줄러에서 호출)
  * - 일별/월별/연도별 투자손익 조회
@@ -52,18 +52,18 @@ public class AccountService {
 
     /**
      * 특정 회원의 일별 자산 스냅샷을 저장.
-     * 
+     *
      * 1. 중복 스냅샷 체크 (이미 존재하면 스킵)
      * 2. 업비트 API로 현재 잔고 조회 (원화 + 코인)
      * 3. 각 코인의 현재가 조회하여 평가액 계산
      * 4. 당일 입출금 내역 조회
      * 5. 전일 대비 일일 손익 계산
      * 6. DB에 스냅샷 저장
-     * 
+     *
      * [손익 계산 공식]
      * 일일손익 = (오늘 총자산 - 어제 총자산) - (입금 - 출금)
      * 일일수익률 = 일일손익 / 어제 총자산 * 100
-     * 
+     *
      * @param member 대상 회원
      * @param snapshotDate 스냅샷 날짜 (업비트 기준 전일)
      */
@@ -81,7 +81,7 @@ public class AccountService {
         try {
             // 업비트 잔고 조회 (GET /v1/accounts)
             List<UpbitAccountResponse> accounts = upbitApiClient.getAccounts(accessKey, secretKey);
-            
+
             long krwBalance = 0L;   // 원화 잔고
             long coinValue = 0L;    // 코인 평가액 합계
 
@@ -112,7 +112,7 @@ public class AccountService {
 
             // 총 자산 = 원화 잔고 + 코인 평가액
             long totalAsset = krwBalance + coinValue;
-            
+
             // 당일 입출금 내역 조회 (업비트 기준 09:00 ~ 다음날 08:59)
             long deposit = calculateTodayDeposit(accessKey, secretKey, snapshotDate);
             long withdrawal = calculateTodayWithdrawal(accessKey, secretKey, snapshotDate);
@@ -123,10 +123,10 @@ public class AccountService {
 
             // 전일 총자산 (없으면 오늘 총자산으로 대체 → 첫 스냅샷인 경우)
             long prevTotalAsset = prevHistoryOpt.map(AccountHistory::getTotalAsset).orElse(totalAsset);
-            
+
             /**
              * 일일 손익 계산
-             * 
+             *
              * 공식: (오늘 총자산 - 어제 총자산) - (입금 - 출금)
              *
              * 예시:
@@ -135,12 +135,12 @@ public class AccountService {
              * - 실제 손익: 20 - 10 = +10만원 (입금 제외)
              */
             long dailyProfitLoss = (totalAsset - prevTotalAsset) - (deposit - withdrawal);
-            
+
             /**
              * 일일 수익률 계산
-             * 
+             *
              * 공식: 일일손익 / 전일 총자산 × 100
-             * 
+             *
              * 예시:
              * - 전일 100만원, 일일손익 +10만원
              * - 수익률: 10 / 100 × 100 = 10%
@@ -163,20 +163,20 @@ public class AccountService {
                     .build();
 
             accountRepository.save(history);
-            log.info("스냅샷 저장 완료: member={}, date={}, totalAsset={}, dailyPL={}", 
+            log.info("스냅샷 저장 완료: member={}, date={}, totalAsset={}, dailyPL={}",
                     member.getId(), snapshotDate, totalAsset, dailyProfitLoss);
 
         } catch (Exception e) {
-            log.error("스냅샷 저장 실패: member={}, date={}, error={}", 
+            log.error("스냅샷 저장 실패: member={}, date={}, error={}",
                     member.getId(), snapshotDate, e.getMessage(), e);
         }
     }
 
     /**
      * 특정 날짜의 입금 합계를 계산.
-     * 
+     *
      * 업비트 하루 기준: 09:00 ~ 다음날 08:59
-     * 
+     *
      * @param accessKey 업비트 API 키
      * @param secretKey 업비트 시크릿 키
      * @param date 조회 날짜
@@ -186,7 +186,7 @@ public class AccountService {
         try {
             // 업비트 입금 내역 조회 (KRW, 완료 상태만)
             List<UpbitDepositResponse> deposits = upbitApiClient.getKrwDeposits(accessKey, secretKey);
-            
+
             // 업비트 기준 하루: 09:00 ~ 다음날 08:59
             LocalDateTime dayStart = date.atTime(9, 0);
             LocalDateTime dayEnd = date.plusDays(1).atTime(8, 59, 59);
@@ -204,7 +204,7 @@ public class AccountService {
 
     /**
      * 특정 날짜의 출금 합계를 계산.
-     * 
+     *
      * @param accessKey 업비트 API 키
      * @param secretKey 업비트 시크릿 키
      * @param date 조회 날짜
@@ -214,7 +214,7 @@ public class AccountService {
         try {
             // 업비트 출금 내역 조회 (KRW, 완료 상태만)
             List<UpbitWithdrawResponse> withdraws = upbitApiClient.getKrwWithdraws(accessKey, secretKey);
-            
+
             LocalDateTime dayStart = date.atTime(9, 0);
             LocalDateTime dayEnd = date.plusDays(1).atTime(8, 59, 59);
 
@@ -253,17 +253,17 @@ public class AccountService {
 
     /**
      * 특정 월의 일별 투자손익을 조회.
-     * 
+     *
      * 1. 해당 월의 일별 스냅샷 데이터 조회 (최신순)
      * 2. 월 시작 전 마지막 스냅샷 조회 (누적 계산 기준점)
      * 3. 날짜순으로 정렬하여 누적 손익/수익률 계산
      * 4. 최신순으로 다시 정렬하여 반환
-     * 
+     *
      * [누적 손익 계산]
      * - 기준: 해당 월 시작 직전의 총자산
      * - 누적손익 = Σ(일일손익)
      * - 누적수익률 = 누적손익 / 기준자산 × 100
-     * 
+     *
      * @param member 대상 회원
      * @param year 연도
      * @param month 월 (1-12)
@@ -285,7 +285,7 @@ public class AccountService {
         LocalDate monthStart = LocalDate.of(year, month, 1);
         Optional<AccountHistory> prevMonthHistory = accountRepository
                 .findTopByMemberAndSnapshotDateBeforeOrderBySnapshotDateDesc(member, monthStart);
-        
+
         // 기준 자산 (이전 달 마지막 자산 또는 첫 번째 데이터)
         long initialTotalAsset = prevMonthHistory.map(AccountHistory::getTotalAsset)
                 .orElse(sortedHistories.get(0).getTotalAsset());
@@ -303,10 +303,10 @@ public class AccountService {
 
             // 누적 수익률 계산
             BigDecimal cumulativeRate = calculateRate(cumulativePL, initialTotalAsset);
-            
+
             // DTO 변환 (기초자산 = 전일 총자산)
             items.add(DailyProfitItem.fromEntity(history, prevTotalAsset, cumulativePL, cumulativeRate));
-            
+
             // 다음 날의 기초자산은 오늘의 총자산
             prevTotalAsset = history.getTotalAsset();
         }
@@ -341,11 +341,11 @@ public class AccountService {
      * 3. 연도 시작 전 마지막 스냅샷 조회 (누적 계산 기준점)
      * 4. 1월부터 12월까지 순회하며 월별 손익 집계
      * 5. 최신순으로 정렬하여 반환
-     * 
+     *
      * [월별 집계]
      * - 월간손익 = 해당 월의 일일손익 누적
      * - 월간수익률 = 월간손익 / 월초 자산 × 100
-     * 
+     *
      * @param member 대상 회원
      * @param year 연도
      * @return 월별 투자손익 응답
@@ -366,7 +366,7 @@ public class AccountService {
         LocalDate yearStart = LocalDate.of(year, 1, 1);
         Optional<AccountHistory> prevYearHistory = accountRepository
                 .findTopByMemberAndSnapshotDateBeforeOrderBySnapshotDateDesc(member, yearStart);
-        
+
         long initialTotalAsset = prevYearHistory.map(AccountHistory::getTotalAsset)
                 .orElse(yearHistories.get(0).getTotalAsset());
 
@@ -381,10 +381,10 @@ public class AccountService {
 
             // 해당 월의 일일손익 합계 = 월간손익
             long monthlyPL = monthData.stream().mapToLong(AccountHistory::getDailyProfitLoss).sum();
-            
+
             // 누적 손익에 월간손익 추가
             cumulativePL += monthlyPL;
-            
+
             // 월 평균 자산 (평균 투자금액 계산용)
             totalAssetSum += monthData.stream().mapToLong(AccountHistory::getTotalAsset).sum() / monthData.size();
 
@@ -419,7 +419,7 @@ public class AccountService {
      * 3. 첫 번째 스냅샷을 기준점으로 설정
      * 4. 연도순으로 순회하며 연간 손익 집계
      * 5. 최신순으로 정렬하여 반환
-     * 
+     *
      * @param member 대상 회원
      * @return 연도별 투자손익 응답
      */
@@ -437,7 +437,7 @@ public class AccountService {
 
         // 첫 스냅샷 자산을 기준점으로 설정
         long initialTotalAsset = allHistories.get(0).getTotalAsset();
-        
+
         long cumulativePL = 0L;
         List<YearlyProfitItem> items = new ArrayList<>();
 
@@ -447,7 +447,7 @@ public class AccountService {
 
         for (Integer year : sortedYears) {
             List<AccountHistory> yearData = byYear.get(year);
-            
+
             // 연간 손익 = 해당 연도 일일손익 합계
             long yearlyPL = yearData.stream().mapToLong(AccountHistory::getDailyProfitLoss).sum();
             cumulativePL += yearlyPL;
@@ -482,7 +482,7 @@ public class AccountService {
      *
      * - 일별 기준 (AccountHistory): MDD, 총 수익률, 연환산 수익률, 거래일수
      * - 건당 기준 (TradingStatistics): 최대 수익률, 최대 손실률, 승률, 수익/손실 거래 수
-     * 
+     *
      * @param member 대상 회원
      * @return 트레이딩 지표 응답
      */
@@ -518,56 +518,83 @@ public class AccountService {
         AccountHistory last = allHistories.get(allHistories.size() - 1);  // 마지막 스냅샷
 
         // === 일별 기준 지표 계산 ===
-        
+
         // 총 손익 = 모든 일일손익의 합
         long totalPL = allHistories.stream().mapToLong(AccountHistory::getDailyProfitLoss).sum();
-        
+
         // 총 입금액
         long totalDeposit = allHistories.stream().mapToLong(AccountHistory::getDeposit).sum();
 
         int tradingDays = allHistories.size();  // 총 거래일수
         long daysBetween = ChronoUnit.DAYS.between(first.getSnapshotDate(), last.getSnapshotDate()) + 1;
 
-        // === MDD (Maximum Drawdown) 계산 - 일별 수익률 기반 ===
+        // === 전략 에쿼티 기반 MDD (Maximum Drawdown) 계산 ===
         /**
-         * 시간가중수익률 기반 MDD
-         * 
-         * 입출금 영향을 배제하기 위해 dailyProfitRate를 복리로 누적하여 계산
-         * 
-         * 알고리즘:
-         * 1. 누적수익률 = (1 + r₁) × (1 + r₂) × ... (복리)
-         * 2. 각 날짜마다 고점 갱신 및 drawdown 계산
-         * 3. 가장 큰 하락폭을 MDD로 기록
+         * 계좌 잔고가 아니라, 입출금을 제거한 “전략 에쿼티 곡선”을 기준으로 MDD를 계산하는 방식.
+         *
+         * 처리 흐름 요약:
+         *
+         *   1) 매일의 기록에서 “총자산 / 입금 / 출금 / 순수 전략 손익” 정보를 가져온다.
+         *   2) 이를 이용해 “전날 전략 기준 자산”을 역산한다.
+         *      → 오늘 자산에서 전략 손익과 입출금을 모두 빼면 전날 기준 금액이 된다.
+         *   3) 전날 자산 대비 오늘 전략 손익이 몇 %인지 계산해 하루 전략 수익률을 만든다.
+         *   4) 하루 전략 수익률을 누적 곱하여
+         *      1.0에서 시작하는 “전략 전용 에쿼티 곡선”을 만든다.
+         *      → 입출금과 상관없이 전략 성능만 반영된 그래프
+         *   5) 이 전략 에쿼티 곡선에서
+         *      고점 대비 가장 크게 떨어진 구간을 찾아 MDD로 기록한다.
          */
         BigDecimal maxDrawdown = BigDecimal.ZERO;
         String maxDrawdownDate = "";
-        BigDecimal cumulativeReturn = BigDecimal.ONE;  // 시작 = 1 (100%)
-        BigDecimal peakReturn = BigDecimal.ONE;
-        
+        BigDecimal equity = BigDecimal.ONE;      // 전략 지수 시작값 (1.0 = 100%에서 시작한다고 생각하면 됨)
+        BigDecimal peakEquity = BigDecimal.ONE;  // 지금까지 전략 지수가 기록한 최고값
+
         for (AccountHistory h : allHistories) {
-            // 복리 누적
-            BigDecimal dailyRate = h.getDailyProfitRate()
-                    .divide(BigDecimal.valueOf(100), 8, RoundingMode.HALF_UP);
-            cumulativeReturn = cumulativeReturn.multiply(BigDecimal.ONE.add(dailyRate));
-            
-            // 새로운 고점 갱신
-            if (cumulativeReturn.compareTo(peakReturn) > 0) {
-                peakReturn = cumulativeReturn;
+            long totalAsset = h.getTotalAsset();                       // 오늘 기준 계좌 총자산
+            long cashFlow = h.getDeposit() - h.getWithdrawal();        // 오늘 하루 순입출금 (입금 +, 출금 -)
+            long pnl = h.getDailyProfitLoss();                         // 오늘 전략으로 실제로 벌거나 잃은 금액
+
+            // "전날 전략 기준으로 계좌에 얼마가 있었는지" 역산
+            // 오늘 자산에서, 오늘 전략 손익과 오늘 입출금을 모두 빼면
+            // 전략이 작동하기 직전에 계좌에 있었던 금액(전날 기준 자산)을 추정할 수 있다.
+            long prevAsset = totalAsset - pnl - cashFlow;
+
+            // 전날 기준 자산이 0 이하라면,
+            // 수익률(몇 % 올랐는지/떨어졌는지)을 계산해도 의미가 없으므로 해당 일자는 스킵
+            if (prevAsset <= 0) {
+                continue;
             }
-            
-            // 현재 Drawdown 계산 (고점 대비 하락률)
-            if (peakReturn.compareTo(BigDecimal.ZERO) > 0) {
-                BigDecimal drawdown = cumulativeReturn.subtract(peakReturn)
-                        .divide(peakReturn, 6, RoundingMode.HALF_UP)
+
+            // 오늘 전략 손익이 "전날 기준 자산" 대비 몇 %인지 계산 (하루 수익률)
+            BigDecimal periodReturn = BigDecimal.valueOf(pnl)
+                    .divide(BigDecimal.valueOf(prevAsset), 8, RoundingMode.HALF_UP);
+
+            // 전략 지수 업데이트
+            // 전날 전략 지수에 (1 + 하루 수익률)을 곱해서 오늘 전략 지수를 만든다.
+            equity = equity.multiply(BigDecimal.ONE.add(periodReturn));
+
+            // 지금까지 중에서 전략 지수가 가장 높았던 시점을 고점으로 기록
+            if (equity.compareTo(peakEquity) > 0) {
+                peakEquity = equity;
+            }
+
+            // 현재 시점에서의 하락률 계산
+            // "지금 전략 지수가, 과거 최고점 대비 얼마나 떨어져 있는지"를 %로 구한다.
+            if (peakEquity.compareTo(BigDecimal.ZERO) > 0) {
+                BigDecimal drawdown = equity.subtract(peakEquity)
+                        .divide(peakEquity, 6, RoundingMode.HALF_UP)
                         .multiply(BigDecimal.valueOf(100));
-                
-                // 더 큰 하락(더 작은 음수)이면 갱신
+
+                // drawdown은 보통 음수 값이고,
+                // 이 값이 가장 작을수록(즉, 가장 많이 떨어졌을수록) MDD가 커진다.
                 if (drawdown.compareTo(maxDrawdown) < 0) {
                     maxDrawdown = drawdown;
                     maxDrawdownDate = h.getSnapshotDate().toString();
                 }
             }
         }
+
+
 
         // === 연환산 수익률 계산 ===
         BigDecimal annualizedReturn = BigDecimal.ZERO;
@@ -600,7 +627,7 @@ public class AccountService {
 
     /**
      * 데이터가 존재하는 연도 목록을 조회.
-     * 
+     *
      * @param member 대상 회원
      * @return 연도 목록 (최신순)
      */
@@ -618,9 +645,9 @@ public class AccountService {
 
     /**
      * 수익률을 계산.
-     * 
+     *
      * 공식: 손익 / 기준자산 × 100
-     * 
+     *
      * @param profitLoss 손익 금액
      * @param baseAsset 기준 자산 (분모)
      * @return 수익률 (%, 소수점 4자리)
