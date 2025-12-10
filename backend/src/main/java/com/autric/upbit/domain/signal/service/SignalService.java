@@ -19,6 +19,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -66,6 +68,25 @@ public class SignalService {
     public SignalListResponse getSignalsByMember(Long memberId, int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
         Page<Signals> signalPage = signalRepository.findSignalsByMember(pageable);
+
+        return SignalListResponse.fromEntity(signalPage);
+    }
+
+    /**
+     * 모든 시그널 목록 조회 with 필터링 (마켓, 날짜 범위, 전략)
+     */
+    @Transactional(readOnly = true)
+    public SignalListResponse getSignalsByMemberWithFilters(
+            Long memberId, int page, int size,
+            String market, LocalDate startDate, LocalDate endDate, Long strategyId) {
+
+        // LocalDate를 LocalDateTime으로 변환
+        LocalDateTime startDateTime = startDate != null ? startDate.atStartOfDay() : null;
+        LocalDateTime endDateTime = endDate != null ? endDate.plusDays(1).atStartOfDay() : null;
+
+        Pageable pageable = PageRequest.of(page, size);
+        Page<Signals> signalPage = signalRepository.findSignalsWithFilters(
+                market, startDateTime, endDateTime, strategyId, pageable);
 
         return SignalListResponse.fromEntity(signalPage);
     }

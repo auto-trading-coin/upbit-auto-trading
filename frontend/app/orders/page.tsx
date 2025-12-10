@@ -13,7 +13,10 @@ import { useUser } from "@/hooks/queries/useUser"
 import { useOrders } from "@/hooks/queries/useOrders"
 import { useRelatedSignal } from "@/hooks/queries/useRelatedSignals"
 import { useSignals } from "@/hooks/queries/useSignals"
+import { useStrategies } from "@/hooks/queries/useStrategies"
 import { Order, Signal } from "@/types"
+import { OrderFilters } from "@/components/filters/OrderFilters"
+import { SignalFilters } from "@/components/filters/SignalFilters"
 
 
 
@@ -21,16 +24,43 @@ export default function OrdersPage() {
   const router = useRouter()
   const { data: user } = useUser()
 
+  // 주문 필터 상태
+  const [orderFilters, setOrderFilters] = useState({
+    market: "",
+    startDate: "",
+    endDate: "",
+    side: ""
+  })
+
   // 주문 무한스크롤 상태
   const [currentPage, setCurrentPage] = useState(0)
   const [allOrders, setAllOrders] = useState<Order[]>([])
   const [hasMoreOrders, setHasMoreOrders] = useState(true)
   const [isLoadingMoreOrders, setIsLoadingMoreOrders] = useState(false)
 
-  // 현재 페이지 주문 데이터 조회
-  const { data: orderData, isLoading: isLoadingOrders } = useOrders({ page: currentPage, size: 10 })
+  // 현재 페이지 주문 데이터 조회 (필터 포함)
+  const { data: orderData, isLoading: isLoadingOrders } = useOrders({
+    page: currentPage,
+    size: 10,
+    filters: orderFilters.market || orderFilters.startDate || orderFilters.endDate || orderFilters.side
+      ? {
+        market: orderFilters.market || undefined,
+        startDate: orderFilters.startDate || undefined,
+        endDate: orderFilters.endDate || undefined,
+        side: orderFilters.side || undefined
+      }
+      : undefined
+  })
 
   const [activeTab, setActiveTab] = useState<string>("orders")
+
+  // 시그널 필터 상태
+  const [signalFilters, setSignalFilters] = useState({
+    market: "",
+    startDate: "",
+    endDate: "",
+    strategyId: ""
+  })
 
   // 시그널 무한스크롤 상태
   const [currentSignalPage, setCurrentSignalPage] = useState(0)
@@ -38,8 +68,22 @@ export default function OrdersPage() {
   const [hasMoreSignals, setHasMoreSignals] = useState(true)
   const [isLoadingMoreSignals, setIsLoadingMoreSignals] = useState(false)
 
-  // 현재 페이지 시그널 데이터 조회
-  const { data: signalData, isLoading: isLoadingSignals } = useSignals({ page: currentSignalPage, size: 10 })
+  // 현재 페이지 시그널 데이터 조회 (필터 포함)
+  const { data: signalData, isLoading: isLoadingSignals } = useSignals({
+    page: currentSignalPage,
+    size: 10,
+    filters: signalFilters.market || signalFilters.startDate || signalFilters.endDate || signalFilters.strategyId
+      ? {
+        market: signalFilters.market || undefined,
+        startDate: signalFilters.startDate || undefined,
+        endDate: signalFilters.endDate || undefined,
+        strategyId: signalFilters.strategyId ? Number(signalFilters.strategyId) : undefined
+      }
+      : undefined
+  })
+
+  // 전략 목록 조회
+  const { data: strategies } = useStrategies()
 
   // 시그널 모달 상태
   const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null)
@@ -79,6 +123,19 @@ export default function OrdersPage() {
     setShowSignalModal(true)
   }
 
+  // 주문 필터 변경 핸들러
+  const handleOrderFilterChange = (newFilters: typeof orderFilters) => {
+    setOrderFilters(newFilters)
+    setCurrentPage(0) // 필터 변경 시 첫 페이지로 리셋
+    setAllOrders([]) // 기존 데이터 초기화
+  }
+
+  const handleOrderFilterReset = () => {
+    setOrderFilters({ market: "", startDate: "", endDate: "", side: "" })
+    setCurrentPage(0)
+    setAllOrders([])
+  }
+
   // 무한 스크롤 - 주문 로그
   const loadMoreOrders = useCallback(() => {
     if (isLoadingMoreOrders || !hasMoreOrders || isLoadingOrders) {
@@ -106,6 +163,19 @@ export default function OrdersPage() {
       setIsLoadingMoreSignals(false)
     }
   }, [signalData, currentSignalPage])
+
+  // 시그널 필터 변경 핸들러
+  const handleSignalFilterChange = (newFilters: typeof signalFilters) => {
+    setSignalFilters(newFilters)
+    setCurrentSignalPage(0) // 필터 변경 시 첫 페이지로 리셋
+    setAllSignals([]) // 기존 데이터 초기화
+  }
+
+  const handleSignalFilterReset = () => {
+    setSignalFilters({ market: "", startDate: "", endDate: "", strategyId: "" })
+    setCurrentSignalPage(0)
+    setAllSignals([])
+  }
 
   // 무한 스크롤 - 시그널 로그
   const loadMoreSignals = useCallback(() => {
@@ -247,7 +317,13 @@ export default function OrdersPage() {
                   <CardTitle>주문 내역</CardTitle>
                   <CardDescription>최근 주문 내역을 확인합니다.</CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="space-y-4">
+                  {/* 필터 UI */}
+                  <OrderFilters
+                    filters={orderFilters}
+                    onFilterChange={handleOrderFilterChange}
+                    onReset={handleOrderFilterReset}
+                  />
                   <div className="overflow-x-auto">
                     <table className="w-full border-collapse">
                       <thead>
@@ -353,7 +429,14 @@ export default function OrdersPage() {
                   <CardTitle>시그널 로그</CardTitle>
                   <CardDescription>모든 자동 매매 시그널 로그를 확인합니다. 전략 선택에 참고하세요.</CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="space-y-4">
+                  {/* 필터 UI */}
+                  <SignalFilters
+                    filters={signalFilters}
+                    onFilterChange={handleSignalFilterChange}
+                    onReset={handleSignalFilterReset}
+                    strategies={strategies || []}
+                  />
                   <div className="overflow-x-auto">
                     <table className="w-full border-collapse">
                       <thead>
