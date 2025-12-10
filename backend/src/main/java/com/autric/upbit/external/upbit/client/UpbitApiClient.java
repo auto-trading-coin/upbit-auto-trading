@@ -3,6 +3,7 @@ package com.autric.upbit.external.upbit.client;
 import com.autric.upbit.domain.chart.entity.Market;
 import com.autric.upbit.external.upbit.dto.response.*;
 import com.autric.upbit.external.upbit.util.UpbitUtil;
+import java.time.LocalDate;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
@@ -232,5 +233,95 @@ public class UpbitApiClient {
                 .next()
                 .timeout(Duration.ofSeconds(5))
                 .block(); // 블로킹
+    }
+
+    /**
+     * 입금 내역 조회
+     * 
+     * @param accessKey 업비트 키
+     * @param secretKey 업비트 키
+     * @param currency  화폐 코드 (null이면 전체)
+     * @param state     입금 상태 (null이면 전체)
+     * @param limit     조회 개수 (기본 100, 최대 100)
+     * @return 입금 내역 리스트
+     */
+    public List<UpbitDepositResponse> getDeposits(String accessKey, String secretKey, 
+                                                   String currency, String state, Integer limit) {
+        Map<String, String> params = new LinkedHashMap<>();
+        if (currency != null) params.put("currency", currency);
+        if (state != null) params.put("state", state);
+        if (limit != null) params.put("limit", String.valueOf(limit));
+        
+        String jwt = upbitUtil.createUpbitJwt(accessKey, secretKey, params);
+        
+        return upbitWebClient.get()
+                .uri(uriBuilder -> {
+                    uriBuilder.path("/v1/deposits");
+                    if (currency != null) uriBuilder.queryParam("currency", currency);
+                    if (state != null) uriBuilder.queryParam("state", state);
+                    if (limit != null) uriBuilder.queryParam("limit", limit);
+                    return uriBuilder.build();
+                })
+                .header("Authorization", "Bearer " + jwt)
+                .retrieve()
+                .bodyToFlux(UpbitDepositResponse.class)
+                .collectList()
+                .block();
+    }
+
+    /**
+     * 입금 내역 조회 (완료된 KRW 입금만)
+     * 
+     * @param accessKey 업비트 키
+     * @param secretKey 업비트 키
+     * @return KRW 완료 입금 내역 리스트
+     */
+    public List<UpbitDepositResponse> getKrwDeposits(String accessKey, String secretKey) {
+        return getDeposits(accessKey, secretKey, "KRW", "ACCEPTED", 100);
+    }
+
+    /**
+     * 출금 내역 조회
+     * 
+     * @param accessKey 업비트 키
+     * @param secretKey 업비트 키
+     * @param currency  화폐 코드 (null이면 전체)
+     * @param state     출금 상태 (null이면 전체)
+     * @param limit     조회 개수 (기본 100, 최대 100)
+     * @return 출금 내역 리스트
+     */
+    public List<UpbitWithdrawResponse> getWithdraws(String accessKey, String secretKey,
+                                                     String currency, String state, Integer limit) {
+        Map<String, String> params = new LinkedHashMap<>();
+        if (currency != null) params.put("currency", currency);
+        if (state != null) params.put("state", state);
+        if (limit != null) params.put("limit", String.valueOf(limit));
+        
+        String jwt = upbitUtil.createUpbitJwt(accessKey, secretKey, params);
+        
+        return upbitWebClient.get()
+                .uri(uriBuilder -> {
+                    uriBuilder.path("/v1/withdraws");
+                    if (currency != null) uriBuilder.queryParam("currency", currency);
+                    if (state != null) uriBuilder.queryParam("state", state);
+                    if (limit != null) uriBuilder.queryParam("limit", limit);
+                    return uriBuilder.build();
+                })
+                .header("Authorization", "Bearer " + jwt)
+                .retrieve()
+                .bodyToFlux(UpbitWithdrawResponse.class)
+                .collectList()
+                .block();
+    }
+
+    /**
+     * 출금 내역 조회 (완료된 KRW 출금만)
+     * 
+     * @param accessKey 업비트 키
+     * @param secretKey 업비트 키
+     * @return KRW 완료 출금 내역 리스트
+     */
+    public List<UpbitWithdrawResponse> getKrwWithdraws(String accessKey, String secretKey) {
+        return getWithdraws(accessKey, secretKey, "KRW", "DONE", 100);
     }
 }

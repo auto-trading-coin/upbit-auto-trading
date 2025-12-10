@@ -4,10 +4,12 @@ import com.autric.upbit.domain.chart.entity.Market;
 import com.autric.upbit.domain.chart.service.MarketService;
 import com.autric.upbit.domain.member.entity.Member;
 import com.autric.upbit.domain.member.service.MemberService;
+import com.autric.upbit.domain.order.entity.Orders;
 import com.autric.upbit.domain.order.service.OrderService;
 import com.autric.upbit.domain.signal.entity.Signals;
 import com.autric.upbit.domain.strategy.entity.Strategy;
 import com.autric.upbit.domain.strategy.service.StrategyService;
+import com.autric.upbit.domain.trade.service.TradingStatisticsService;
 import com.autric.upbit.domain.upbitApiKey.UpbitApiKey;
 import com.autric.upbit.external.kafka.dto.SignalMessage;
 import com.autric.upbit.external.upbit.client.UpbitApiClient;
@@ -35,6 +37,7 @@ public class SignalProcessingService {
     private final MarketService marketService;
     private final SignalService signalService;
     private final OrderService orderService;
+    private final TradingStatisticsService tradingStatisticsService;
 
     public void process(SignalMessage msg) {
         if (!strategyService.existsById(msg.getStrategy())) {
@@ -112,7 +115,13 @@ public class SignalProcessingService {
                         m.getId(), res.getMarket(), res.getExecutedVolume(), res.getPrice(), res.getUuid(),
                         res.getOrdType());
 
-                orderService.createOrder(res.toOrderEntity(market, m, signal));
+                // 주문 저장
+                Orders savedOrder = orderService.createOrder(res.toOrderEntity(market, m, signal));
+
+                // 매도 완료 시 거래 통계 업데이트
+                if (msg.getSide().equals("ask")) {
+                    tradingStatisticsService.updateOnSell(m, market, savedOrder);
+                }
 
             } catch (Exception e) {
                 log.error("Member {} market buy FAILED: {}", m.getId(), e.getMessage(), e);
