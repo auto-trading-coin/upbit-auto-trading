@@ -1,47 +1,50 @@
 "use client"
 
-import { useState, useRef, useCallback, useEffect } from "react"
+import { useState, useRef, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { AlertTriangle, Loader2, Key, Zap, Check, Clock, X } from "lucide-react"
+import { AlertTriangle, Loader2, Key, Zap } from "lucide-react"
 import { AuthGuard } from "@/components/common"
 import { useUser } from "@/hooks/queries/useUser"
 import { useOrders } from "@/hooks/queries/useOrders"
 import { useRelatedSignal } from "@/hooks/queries/useRelatedSignals"
 import { useSignals } from "@/hooks/queries/useSignals"
 import { useStrategies } from "@/hooks/queries/useStrategies"
-import { Order, Signal } from "@/types"
 import { OrderFilters } from "@/components/filters/OrderFilters"
 import { SignalFilters } from "@/components/filters/SignalFilters"
-
-
+import { TablePagination } from "@/components/ui/table-pagination"
 
 export default function OrdersPage() {
   const router = useRouter()
   const { data: user } = useUser()
 
-  // 주문 필터 상태
+  // 탭 상태
+  const [activeTab, setActiveTab] = useState<string>("orders")
+
+  // 스크롤 상단 이동을 위한 Ref
+  const ordersTopRef = useRef<HTMLDivElement>(null)
+  const signalsTopRef = useRef<HTMLDivElement>(null)
+
+  // ==========================================
+  // [주문 내역] 상태 및 핸들러
+  // ==========================================
   const [orderFilters, setOrderFilters] = useState({
     market: "",
     startDate: "",
     endDate: "",
     side: ""
   })
+  const [orderPage, setOrderPage] = useState(0)
+  const [orderPageSize, setOrderPageSize] = useState(10)
 
-  // 주문 무한스크롤 상태
-  const [currentPage, setCurrentPage] = useState(0)
-  const [allOrders, setAllOrders] = useState<Order[]>([])
-  const [hasMoreOrders, setHasMoreOrders] = useState(true)
-  const [isLoadingMoreOrders, setIsLoadingMoreOrders] = useState(false)
-
-  // 현재 페이지 주문 데이터 조회 (필터 포함)
+  // 주문 데이터 조회
   const { data: orderData, isLoading: isLoadingOrders } = useOrders({
-    page: currentPage,
-    size: 10,
+    page: orderPage,
+    size: orderPageSize,
     filters: orderFilters.market || orderFilters.startDate || orderFilters.endDate || orderFilters.side
       ? {
         market: orderFilters.market || undefined,
@@ -52,26 +55,47 @@ export default function OrdersPage() {
       : undefined
   })
 
-  const [activeTab, setActiveTab] = useState<string>("orders")
+  // 주문 필터 변경
+  const handleOrderFilterChange = (newFilters: typeof orderFilters) => {
+    setOrderFilters(newFilters)
+    setOrderPage(0)
+  }
 
-  // 시그널 필터 상태
+  const handleOrderFilterReset = () => {
+    setOrderFilters({ market: "", startDate: "", endDate: "", side: "" })
+    setOrderPage(0)
+  }
+
+  // 주문 페이지 변경
+  const handleOrderPageChange = (pageNum: number) => {
+    setOrderPage(pageNum)
+  }
+
+  // 주문 페이지 변경 시 자동 스크롤
+  useEffect(() => {
+    // 첫 렌더링 시 스크롤 방지 (필요하다면 조건 추가)
+    if (orderPage > 0 || orderData?.orders) {
+      ordersTopRef.current?.scrollIntoView({ behavior: 'smooth' })
+    }
+  }, [orderPage])
+
+
+  // ==========================================
+  // [시그널 로그] 상태 및 핸들러
+  // ==========================================
   const [signalFilters, setSignalFilters] = useState({
     market: "",
     startDate: "",
     endDate: "",
     strategyId: ""
   })
+  const [signalPage, setSignalPage] = useState(0)
+  const [signalPageSize, setSignalPageSize] = useState(10)
 
-  // 시그널 무한스크롤 상태
-  const [currentSignalPage, setCurrentSignalPage] = useState(0)
-  const [allSignals, setAllSignals] = useState<Signal[]>([])
-  const [hasMoreSignals, setHasMoreSignals] = useState(true)
-  const [isLoadingMoreSignals, setIsLoadingMoreSignals] = useState(false)
-
-  // 현재 페이지 시그널 데이터 조회 (필터 포함)
+  // 시그널 데이터 조회
   const { data: signalData, isLoading: isLoadingSignals } = useSignals({
-    page: currentSignalPage,
-    size: 10,
+    page: signalPage,
+    size: signalPageSize,
     filters: signalFilters.market || signalFilters.startDate || signalFilters.endDate || signalFilters.strategyId
       ? {
         market: signalFilters.market || undefined,
@@ -85,171 +109,41 @@ export default function OrdersPage() {
   // 전략 목록 조회
   const { data: strategies } = useStrategies()
 
-  // 시그널 모달 상태
-  const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null)
-  const [showSignalModal, setShowSignalModal] = useState<boolean>(false)
-
-  // 선택된 주문의 관련 시그널 조회 (API)
-  const { data: relatedSignal, isLoading: isLoadingRelatedSignal } = useRelatedSignal(selectedOrderId)
-
-  const ordersEndRef = useRef<HTMLTableRowElement>(null)
-  const signalsEndRef = useRef<HTMLTableRowElement>(null)
-  const observerRef = useRef<IntersectionObserver | null>(null)  // observer 인스턴스 저장
-  const signalObserverRef = useRef<IntersectionObserver | null>(null)  // signal observer
-
-  // 주문 데이터 로드 시 누적
-  useEffect(() => {
-    if (orderData?.orders) {
-      if (currentPage === 0) {
-        // 첫 페이지면 초기화
-        setAllOrders(orderData.orders)
-      } else {
-        // 추가 페이지면 중복 제거 후 누적
-        setAllOrders(prev => {
-          const newOrders = orderData.orders.filter(
-            newOrder => !prev.some(existing => existing.id === newOrder.id)
-          )
-          return [...prev, ...newOrders]
-        })
-      }
-      setHasMoreOrders(orderData.hasMore)
-      setIsLoadingMoreOrders(false)
-    }
-  }, [orderData, currentPage])
-
-  // 관련 시그널 보기 함수
-  const handleViewRelatedSignals = (orderId: number) => {
-    setSelectedOrderId(orderId)
-    setShowSignalModal(true)
-  }
-
-  // 주문 필터 변경 핸들러
-  const handleOrderFilterChange = (newFilters: typeof orderFilters) => {
-    setOrderFilters(newFilters)
-    setCurrentPage(0) // 필터 변경 시 첫 페이지로 리셋
-    setAllOrders([]) // 기존 데이터 초기화
-  }
-
-  const handleOrderFilterReset = () => {
-    setOrderFilters({ market: "", startDate: "", endDate: "", side: "" })
-    setCurrentPage(0)
-    setAllOrders([])
-  }
-
-  // 무한 스크롤 - 주문 로그
-  const loadMoreOrders = useCallback(() => {
-    if (isLoadingMoreOrders || !hasMoreOrders || isLoadingOrders) {
-      return
-    }
-
-    setIsLoadingMoreOrders(true)
-    setCurrentPage(prev => prev + 1)
-  }, [isLoadingMoreOrders, hasMoreOrders, isLoadingOrders, currentPage])
-
-  // 시그널 데이터 로드 시 누적
-  useEffect(() => {
-    if (signalData?.signals) {
-      if (currentSignalPage === 0) {
-        setAllSignals(signalData.signals)
-      } else {
-        setAllSignals(prev => {
-          const newSignals = signalData.signals.filter(
-            newSignal => !prev.some(existing => existing.id === newSignal.id)
-          )
-          return [...prev, ...newSignals]
-        })
-      }
-      setHasMoreSignals(signalData.hasMore)
-      setIsLoadingMoreSignals(false)
-    }
-  }, [signalData, currentSignalPage])
-
-  // 시그널 필터 변경 핸들러
+  // 시그널 필터 변경
   const handleSignalFilterChange = (newFilters: typeof signalFilters) => {
     setSignalFilters(newFilters)
-    setCurrentSignalPage(0) // 필터 변경 시 첫 페이지로 리셋
-    setAllSignals([]) // 기존 데이터 초기화
+    setSignalPage(0)
   }
 
   const handleSignalFilterReset = () => {
     setSignalFilters({ market: "", startDate: "", endDate: "", strategyId: "" })
-    setCurrentSignalPage(0)
-    setAllSignals([])
+    setSignalPage(0)
   }
 
-  // 무한 스크롤 - 시그널 로그
-  const loadMoreSignals = useCallback(() => {
-    if (isLoadingMoreSignals || !hasMoreSignals || isLoadingSignals) return
+  // 시그널 페이지 변경
+  const handleSignalPageChange = (pageNum: number) => {
+    setSignalPage(pageNum)
+  }
 
-    setIsLoadingMoreSignals(true)
-    setCurrentSignalPage(prev => prev + 1)
-  }, [isLoadingMoreSignals, hasMoreSignals, isLoadingSignals])
-
-
-
-  // 인터섹션 옵저버 설정 - 주문 로그
+  // 시그널 페이지 변경 시 자동 스크롤
   useEffect(() => {
-    // 이전 observer cleanup
-    if (observerRef.current) {
-      observerRef.current.disconnect()
-      observerRef.current = null
+    // 첫 렌더링 시 스크롤 방지 (필요하다면 조건 추가)
+    if (signalPage > 0 || signalData?.signals) {
+      signalsTopRef.current?.scrollIntoView({ behavior: 'smooth' })
     }
+  }, [signalPage])
 
-    if (!ordersEndRef.current || activeTab !== "orders" || !hasMoreOrders) {
-      return
-    }
+  // ==========================================
+  // [모달] 관련 시그널 보기
+  // ==========================================
+  const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null)
+  const [showSignalModal, setShowSignalModal] = useState<boolean>(false)
+  const { data: relatedSignal, isLoading: isLoadingRelatedSignal } = useRelatedSignal(selectedOrderId)
 
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting) {
-          loadMoreOrders()
-        }
-      },
-      { threshold: 0.1 }
-    )
-
-    observer.observe(ordersEndRef.current)
-    observerRef.current = observer
-
-    return () => {
-      if (observerRef.current) {
-        observerRef.current.disconnect()
-        observerRef.current = null
-      }
-    }
-  }, [loadMoreOrders, activeTab, hasMoreOrders, allOrders.length])  // allOrders.length 추가!
-
-  // 인터섹션 옵저버 설정 - 시그널 로그
-  useEffect(() => {
-    // 이전 observer cleanup
-    if (signalObserverRef.current) {
-      signalObserverRef.current.disconnect()
-      signalObserverRef.current = null
-    }
-
-    if (!signalsEndRef.current || activeTab !== "signals" || !hasMoreSignals) {
-      return
-    }
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting) {
-          loadMoreSignals()
-        }
-      },
-      { threshold: 0.1 }
-    )
-
-    observer.observe(signalsEndRef.current)
-    signalObserverRef.current = observer
-
-    return () => {
-      if (signalObserverRef.current) {
-        signalObserverRef.current.disconnect()
-        signalObserverRef.current = null
-      }
-    }
-  }, [loadMoreSignals, activeTab, hasMoreSignals, allSignals.length])
+  const handleViewRelatedSignals = (orderId: number) => {
+    setSelectedOrderId(orderId)
+    setShowSignalModal(true)
+  }
 
   // 날짜 포맷 함수
   const formatDate = (dateString: string): string => {
@@ -267,6 +161,7 @@ export default function OrdersPage() {
           </Button>
         </div>
 
+        {/* API 키 미등록 안내 (카드 형태) */}
         {user && !user.apiKeyRegistered && (
           <Card className="border-amber-300 bg-amber-50">
             <CardHeader>
@@ -295,6 +190,7 @@ export default function OrdersPage() {
           </Card>
         )}
 
+        {/* 메인 컨텐츠 */}
         {user && !user.apiKeyRegistered ? (
           <div className="flex flex-col items-center justify-center py-12 text-center">
             <Key className="h-16 w-16 text-amber-500 mb-6" />
@@ -311,193 +207,191 @@ export default function OrdersPage() {
               <TabsTrigger value="signals">시그널 로그</TabsTrigger>
             </TabsList>
 
+            {/* TAB: 주문 내역 */}
             <TabsContent value="orders" className="space-y-4">
+              <div ref={ordersTopRef} className="scroll-mt-20" /> {/* 스크롤 앵커 */}
               <Card>
                 <CardHeader>
                   <CardTitle>주문 내역</CardTitle>
                   <CardDescription>최근 주문 내역을 확인합니다.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {/* 필터 UI */}
                   <OrderFilters
                     filters={orderFilters}
                     onFilterChange={handleOrderFilterChange}
                     onReset={handleOrderFilterReset}
                   />
-                  <div className="overflow-x-auto">
-                    <table className="w-full border-collapse">
-                      <thead>
-                        <tr className="border-b">
-                          <th className="py-3 px-4 text-left font-medium">주문 ID</th>
-                          <th className="py-3 px-4 text-left font-medium">마켓</th>
-                          <th className="py-3 px-4 text-left font-medium">주문 유형</th>
-                          <th className="py-3 px-4 text-right font-medium">주문 가격</th>
-                          <th className="py-3 px-4 text-right font-medium">주문 수량</th>
-                          <th className="py-3 px-4 text-right font-medium">총 금액</th>
-                          <th className="py-3 px-4 text-center font-medium">생성 시간</th>
-                          <th className="py-3 px-4 text-center font-medium">시그널</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {isLoadingOrders && currentPage === 0 ? (
-                          <tr>
-                            <td colSpan={8} className="py-8 text-center">
-                              <Loader2 className="h-6 w-6 animate-spin mx-auto" />
-                            </td>
+
+                  <div className="rounded-md border">
+                    <div className="overflow-x-auto">
+                      <table className="w-full border-collapse text-sm">
+                        <thead>
+                          <tr className="border-b bg-muted/50 transition-colors hover:bg-muted/50">
+                            <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">주문 ID</th>
+                            <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">마켓</th>
+                            <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">주문 유형</th>
+                            <th className="h-12 px-4 text-right align-middle font-medium text-muted-foreground">주문 가격</th>
+                            <th className="h-12 px-4 text-right align-middle font-medium text-muted-foreground">주문 수량</th>
+                            <th className="h-12 px-4 text-right align-middle font-medium text-muted-foreground">총 금액</th>
+                            <th className="h-12 px-4 text-center align-middle font-medium text-muted-foreground">생성 시간</th>
+                            <th className="h-12 px-4 text-center align-middle font-medium text-muted-foreground">시그널</th>
                           </tr>
-                        ) : !user?.apiKeyRegistered ? (
-                          <tr>
-                            <td colSpan={8} className="py-8 text-center">
-                              <div className="flex flex-col items-center space-y-4">
-                                <Key className="h-12 w-12 text-muted-foreground" />
-                                <div>
-                                  <p className="text-muted-foreground">API 키를 먼저 등록해주세요</p>
-                                  <Button
-                                    variant="outline"
-                                    className="mt-2"
-                                    onClick={() => router.push("/mypage")}
-                                  >
-                                    API 키 등록하러 가기
-                                  </Button>
+                        </thead>
+                        <tbody>
+                          {isLoadingOrders ? (
+                            <tr>
+                              <td colSpan={8} className="h-24 text-center">
+                                <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
+                              </td>
+                            </tr>
+                          ) : !orderData?.orders || orderData.orders.length === 0 ? (
+                            <tr>
+                              <td colSpan={8} className="h-24 text-center">
+                                <div className="flex flex-col items-center justify-center space-y-2">
+                                  <AlertTriangle className="h-8 w-8 text-muted-foreground/50" />
+                                  <p className="text-muted-foreground">주문 내역이 없습니다</p>
                                 </div>
-                              </div>
-                            </td>
-                          </tr>
-                        ) : allOrders.length === 0 ? (
-                          <tr>
-                            <td colSpan={8} className="py-8 text-center">
-                              <div className="flex flex-col items-center space-y-4">
-                                <AlertTriangle className="h-12 w-12 text-muted-foreground" />
-                                <p className="text-muted-foreground">주문 내역이 없습니다</p>
-                              </div>
-                            </td>
-                          </tr>
-                        ) : (
-                          <>
-                            {allOrders.map((order) => (
-                              <tr key={order.id} className="border-b hover:bg-muted/50">
-                                <td className="py-3 px-4 text-sm">{order.id}</td>
-                                <td className="py-3 px-4">{order.market}</td>
-                                <td className="py-3 px-4">
+                              </td>
+                            </tr>
+                          ) : (
+                            orderData.orders.map((order) => (
+                              <tr key={order.id} className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
+                                <td className="p-4 align-middle">{order.id}</td>
+                                <td className="p-4 align-middle font-medium">{order.market}</td>
+                                <td className="p-4 align-middle">
                                   <Badge variant={order.side === "bid" ? "default" : "destructive"}>
                                     {order.side === "bid" ? "매수" : "매도"}
                                   </Badge>
                                 </td>
-                                <td className="py-3 px-4 text-right">{order.price?.toLocaleString()} KRW</td>
-                                <td className="py-3 px-4 text-right">
+                                <td className="p-4 align-middle text-right">{order.price?.toLocaleString()} KRW</td>
+                                <td className="p-4 align-middle text-right">
                                   {order.volume?.toLocaleString(undefined, { maximumFractionDigits: 8 })}
                                 </td>
-                                <td className="py-3 px-4 text-right font-medium">
+                                <td className="p-4 align-middle text-right font-medium">
                                   {order.totalAmount?.toLocaleString()} KRW
                                 </td>
-                                <td className="py-3 px-4 text-center text-sm">{formatDate(order.createdAt)}</td>
-                                <td className="py-3 px-4 text-center">
+                                <td className="p-4 align-middle text-center text-muted-foreground">
+                                  {formatDate(order.createdAt)}
+                                </td>
+                                <td className="p-4 align-middle text-center">
                                   {order.relatedSignalId && (
                                     <Button
                                       variant="outline"
                                       size="sm"
-                                      className="h-8 text-xs bg-blue-50 text-blue-700 border-blue-200"
+                                      className="h-8 text-xs bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100 hover:text-blue-800"
                                       onClick={() => handleViewRelatedSignals(order.id)}
                                     >
                                       <Zap className="h-3 w-3 mr-1" />
-                                      시그널 보기
+                                      시그널
                                     </Button>
                                   )}
                                 </td>
                               </tr>
-                            ))}
-                            {/* 무한 스크롤 트리거 */}
-                            {hasMoreOrders && (
-                              <tr ref={ordersEndRef}>
-                                <td colSpan={8} className="py-4 text-center">
-                                  <Loader2 className="h-5 w-5 animate-spin mx-auto text-muted-foreground" />
-                                </td>
-                              </tr>
-                            )}
-                          </>
-                        )}
-                      </tbody>
-                    </table>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
+
+                  {/* 페이지네이션 */}
+                  {orderData && (
+                    <TablePagination
+                      currentPage={orderData.currentPage}
+                      totalPages={orderData.totalPages}
+                      pageSize={orderData.pageSize}
+                      totalElements={orderData.totalElements}
+                      onPageChange={handleOrderPageChange}
+                      onPageSizeChange={setOrderPageSize}
+                    />
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>
 
+            {/* TAB: 시그널 로그 */}
             <TabsContent value="signals" className="space-y-4">
+              <div ref={signalsTopRef} className="scroll-mt-20" /> {/* 스크롤 앵커 */}
               <Card>
                 <CardHeader>
                   <CardTitle>시그널 로그</CardTitle>
                   <CardDescription>모든 자동 매매 시그널 로그를 확인합니다. 전략 선택에 참고하세요.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {/* 필터 UI */}
                   <SignalFilters
                     filters={signalFilters}
                     onFilterChange={handleSignalFilterChange}
                     onReset={handleSignalFilterReset}
                     strategies={strategies || []}
                   />
-                  <div className="overflow-x-auto">
-                    <table className="w-full border-collapse">
-                      <thead>
-                        <tr className="border-b">
-                          <th className="py-3 px-4 text-left font-medium">시그널 ID</th>
-                          <th className="py-3 px-4 text-left font-medium">전략</th>
-                          <th className="py-3 px-4 text-left font-medium">마켓</th>
-                          <th className="py-3 px-4 text-left font-medium">매매 유형</th>
-                          <th className="py-3 px-4 text-left font-medium">트리거 조건</th>
-                          <th className="py-3 px-4 text-center font-medium">생성 시간</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {isLoadingSignals && currentSignalPage === 0 ? (
-                          <tr>
-                            <td colSpan={6} className="py-8 text-center">
-                              <Loader2 className="h-6 w-6 animate-spin mx-auto" />
-                            </td>
+
+                  <div className="rounded-md border">
+                    <div className="overflow-x-auto">
+                      <table className="w-full border-collapse text-sm">
+                        <thead>
+                          <tr className="border-b bg-muted/50 transition-colors hover:bg-muted/50">
+                            <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">시그널 ID</th>
+                            <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">전략</th>
+                            <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">마켓</th>
+                            <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">매매 유형</th>
+                            <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">트리거 조건</th>
+                            <th className="h-12 px-4 text-center align-middle font-medium text-muted-foreground">생성 시간</th>
                           </tr>
-                        ) : allSignals.length === 0 ? (
-                          <tr>
-                            <td colSpan={6} className="py-8 text-center">
-                              <div className="flex flex-col items-center space-y-4">
-                                <AlertTriangle className="h-12 w-12 text-muted-foreground" />
-                                <p className="text-muted-foreground">시그널 로그가 없습니다</p>
-                              </div>
-                            </td>
-                          </tr>
-                        ) : (
-                          <>
-                            {allSignals.map((signal) => (
-                              <tr key={signal.id} className="border-b hover:bg-muted/50">
-                                <td className="py-3 px-4 text-sm">{signal.id}</td>
-                                <td className="py-3 px-4">{signal.strategy}</td>
-                                <td className="py-3 px-4">{signal.market}</td>
-                                <td className="py-3 px-4">
+                        </thead>
+                        <tbody>
+                          {isLoadingSignals ? (
+                            <tr>
+                              <td colSpan={6} className="h-24 text-center">
+                                <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
+                              </td>
+                            </tr>
+                          ) : !signalData?.signals || signalData.signals.length === 0 ? (
+                            <tr>
+                              <td colSpan={6} className="h-24 text-center">
+                                <div className="flex flex-col items-center justify-center space-y-2">
+                                  <AlertTriangle className="h-8 w-8 text-muted-foreground/50" />
+                                  <p className="text-muted-foreground">시그널 로그가 없습니다</p>
+                                </div>
+                              </td>
+                            </tr>
+                          ) : (
+                            signalData.signals.map((signal) => (
+                              <tr key={signal.id} className="border-b transition-colors hover:bg-muted/50">
+                                <td className="p-4 align-middle">{signal.id}</td>
+                                <td className="p-4 align-middle">{signal.strategy}</td>
+                                <td className="p-4 align-middle font-medium">{signal.market}</td>
+                                <td className="p-4 align-middle">
                                   <Badge variant={signal.side === "bid" ? "default" : "destructive"}>
                                     {signal.side === "bid" ? "매수" : "매도"}
                                   </Badge>
                                 </td>
-                                <td className="py-3 px-4">
-                                  <code className="px-1 py-0.5 rounded bg-muted font-mono text-sm">
+                                <td className="p-4 align-middle">
+                                  <code className="relative rounded bg-muted px-[0.3rem] py-[0.2rem] font-mono text-sm">
                                     {signal.conditions || "-"}
                                   </code>
                                 </td>
-                                <td className="py-3 px-4 text-center text-sm">{formatDate(signal.createdAt)}</td>
-                              </tr>
-                            ))}
-                            {/* 무한 스크롤 트리거 */}
-                            {hasMoreSignals && (
-                              <tr ref={signalsEndRef}>
-                                <td colSpan={6} className="py-4 text-center">
-                                  <Loader2 className="h-5 w-5 animate-spin mx-auto text-muted-foreground" />
+                                <td className="p-4 align-middle text-center text-muted-foreground">
+                                  {formatDate(signal.createdAt)}
                                 </td>
                               </tr>
-                            )}
-                          </>
-                        )}
-                      </tbody>
-                    </table>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
+
+                  {/* 페이지네이션 */}
+                  {signalData && (
+                    <TablePagination
+                      currentPage={signalData.currentPage}
+                      totalPages={signalData.totalPages}
+                      pageSize={signalData.pageSize}
+                      totalElements={signalData.totalElements}
+                      onPageChange={handleSignalPageChange}
+                      onPageSizeChange={setSignalPageSize}
+                    />
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>
@@ -521,43 +415,47 @@ export default function OrdersPage() {
                   </p>
                 </div>
               ) : (
-                <table className="w-full border-collapse">
-                  <thead className="sticky top-0 bg-background z-10">
-                    <tr className="border-b">
-                      <th className="py-3 px-4 text-left font-medium">시그널 ID</th>
-                      <th className="py-3 px-4 text-left font-medium">전략</th>
-                      <th className="py-3 px-4 text-left font-medium">마켓</th>
-                      <th className="py-3 px-4 text-left font-medium">매매 유형</th>
-                      <th className="py-3 px-4 text-center font-medium">생성 시간</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {isLoadingRelatedSignal ? (
-                      <tr>
-                        <td colSpan={5} className="py-8 text-center">
-                          <Loader2 className="h-6 w-6 animate-spin mx-auto" />
-                        </td>
+                <div className="rounded-md border">
+                  <table className="w-full border-collapse text-sm">
+                    <thead className="bg-muted/50">
+                      <tr className="border-b">
+                        <th className="h-10 px-4 text-left align-middle font-medium text-muted-foreground">시그널 ID</th>
+                        <th className="h-10 px-4 text-left align-middle font-medium text-muted-foreground">전략</th>
+                        <th className="h-10 px-4 text-left align-middle font-medium text-muted-foreground">마켓</th>
+                        <th className="h-10 px-4 text-left align-middle font-medium text-muted-foreground">매매 유형</th>
+                        <th className="h-10 px-4 text-center align-middle font-medium text-muted-foreground">생성 시간</th>
                       </tr>
-                    ) : relatedSignal && (
-                      <tr className="border-b hover:bg-muted/50">
-                        <td className="py-3 px-4 text-sm">{relatedSignal.id}</td>
-                        <td className="py-3 px-4">{relatedSignal.strategy}</td>
-                        <td className="py-3 px-4">{relatedSignal.market}</td>
-                        <td className="py-3 px-4">
-                          <Badge variant={relatedSignal.side === "bid" ? "default" : "destructive"}>
-                            {relatedSignal.side === "bid" ? "매수" : "매도"}
-                          </Badge>
-                        </td>
-                        <td className="py-3 px-4 text-center text-sm">{formatDate(relatedSignal.createdAt)}</td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {isLoadingRelatedSignal ? (
+                        <tr>
+                          <td colSpan={5} className="h-24 text-center">
+                            <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
+                          </td>
+                        </tr>
+                      ) : relatedSignal && (
+                        <tr className="border-b hover:bg-muted/50">
+                          <td className="p-4 align-middle">{relatedSignal.id}</td>
+                          <td className="p-4 align-middle">{relatedSignal.strategy}</td>
+                          <td className="p-4 align-middle">{relatedSignal.market}</td>
+                          <td className="p-4 align-middle">
+                            <Badge variant={relatedSignal.side === "bid" ? "default" : "destructive"}>
+                              {relatedSignal.side === "bid" ? "매수" : "매도"}
+                            </Badge>
+                          </td>
+                          <td className="p-4 align-middle text-center text-muted-foreground">
+                            {formatDate(relatedSignal.createdAt)}
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               )}
             </div>
           </DialogContent>
-        </Dialog >
-      </div >
-    </AuthGuard >
+        </Dialog>
+      </div>
+    </AuthGuard>
   )
 }
