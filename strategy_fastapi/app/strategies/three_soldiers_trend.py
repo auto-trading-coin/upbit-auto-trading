@@ -25,8 +25,6 @@ class ThreeSoldiersTrend(Strategy):
         # 상태 관리 (마켓별로 저장)
         self._last_buy_time: Dict[str, datetime] = {}
         self._last_sell_time: Dict[str, datetime] = {}
-        self._last_was_buy: Dict[str, bool] = {}
-        self._last_was_sell: Dict[str, bool] = {}
         self._last_processed_candle_time: Dict[str, datetime] = {}  # 마지막 처리한 캔들 시각
 
     def _sma(self, closes: List[float], period: int) -> Optional[float]:
@@ -152,22 +150,15 @@ class ThreeSoldiersTrend(Strategy):
         three_white_soldiers = self._three_white_soldiers(candles_5m)
         three_black_crows = self._three_black_crows(candles_5m)
 
-        # 상태 초기화
-        if market not in self._last_was_buy:
-            self._last_was_buy[market] = False
-            self._last_was_sell[market] = False
-
         # 매수/매도 신호
         # 매수 : 직전 3개 캔들 연속상승 and 30 이평선 상승 and 200이평선 상승
         buy_signal = (three_white_soldiers and
-                      not self._last_was_buy[market] and
                       ma1_current > ma1_prev and
                       ma2_current > ma2_prev and
                       self._check_cooldown(market, "buy", latest_candle.candle_date_time_kst))
 
         # 매도 : 직전 3개 캔들 연속하락 and 30 이평선 하락 and 200이평선 하락
         sell_signal = (three_black_crows and
-                       not self._last_was_sell[market] and
                        ma1_current < ma1_prev and
                        ma2_current < ma2_prev and
                        self._check_cooldown(market, "sell", latest_candle.candle_date_time_kst))
@@ -179,14 +170,10 @@ class ThreeSoldiersTrend(Strategy):
 
         if buy_signal:
             decision = Decision.BID
-            self._last_was_buy[market] = True
-            self._last_was_sell[market] = False
             self._last_buy_time[market] = latest_time
 
         elif sell_signal:
             decision = Decision.ASK
-            self._last_was_sell[market] = True
-            self._last_was_buy[market] = False
             self._last_sell_time[market] = latest_time
 
         return StrategyResult(
