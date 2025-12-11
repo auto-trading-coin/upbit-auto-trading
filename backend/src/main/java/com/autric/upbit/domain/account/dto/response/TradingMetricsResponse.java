@@ -10,7 +10,7 @@ import java.math.BigDecimal;
  * 자동매매 성과 지표 (전체 기간)
  * 
  * 지표별 기준:
- * - 일별 기준: MDD, 총 수익률, 연환산 수익률 (AccountHistory 스냅샷 기반)
+ * - 일별 기준: MDD, 총 수익률 (AccountHistory 스냅샷 기반)
  * - 건당 기준: 최대 수익률, 최대 손실률, 승률, 수익거래, 손실거래 (TradingStatistics 기반)
  */
 @Getter
@@ -21,9 +21,6 @@ public class TradingMetricsResponse {
     
     /** 총 수익률 (%) - 일별 */
     private BigDecimal totalProfitRate;
-    
-    /** 연환산 수익률 (%) - 일별 */
-    private BigDecimal annualizedReturn;
     
     /** MDD 최대낙폭 (%) - 일별 */
     private BigDecimal maxDrawdown;
@@ -74,7 +71,6 @@ public class TradingMetricsResponse {
     public static TradingMetricsResponse empty() {
         return TradingMetricsResponse.builder()
                 .totalProfitRate(BigDecimal.ZERO)
-                .annualizedReturn(BigDecimal.ZERO)
                 .maxProfitRate(BigDecimal.ZERO)
                 .maxDrawdown(BigDecimal.ZERO)
                 .maxDrawdownDate("")
@@ -98,7 +94,6 @@ public class TradingMetricsResponse {
         return TradingMetricsResponse.builder()
                 // 일별 지표 유지
                 .totalProfitRate(base.getTotalProfitRate())
-                .annualizedReturn(base.getAnnualizedReturn())
                 .maxDrawdown(base.getMaxDrawdown())
                 .maxDrawdownDate(base.getMaxDrawdownDate())
                 .tradingStartDate(base.getTradingStartDate())

@@ -31,7 +31,7 @@ import java.util.stream.Collectors;
  * 주요 기능:
  * - 일별 자산 스냅샷 저장 (스케줄러에서 호출)
  * - 일별/월별/연도별 투자손익 조회
- * - 트레이딩 성과 지표 계산 (MDD, 승률, 연환산 수익률 등)
+ * - 트레이딩 성과 지표 계산 (MDD, 승률 등)
  */
 @Slf4j
 @Service
@@ -496,7 +496,6 @@ public class AccountService {
             // 일별 데이터 없어도 건당 통계는 있을 수 있음
             return TradingMetricsResponse.builder()
                     .totalProfitRate(BigDecimal.ZERO)
-                    .annualizedReturn(BigDecimal.ZERO)
                     .maxDrawdown(BigDecimal.ZERO)
                     .maxDrawdownDate("")
                     .tradingStartDate("")
@@ -596,18 +595,10 @@ public class AccountService {
 
 
 
-        // === 연환산 수익률 계산 ===
-        BigDecimal annualizedReturn = BigDecimal.ZERO;
-        if (daysBetween > 0 && first.getTotalAsset() > 0) {
-            double dailyReturn = totalPL / (double) first.getTotalAsset() / daysBetween;
-            annualizedReturn = BigDecimal.valueOf(dailyReturn * 365 * 100).setScale(4, RoundingMode.HALF_UP);
-        }
-
         // === 응답 생성 (일별 + 건당 지표 병합) ===
         return TradingMetricsResponse.builder()
                 // 일별 지표
                 .totalProfitRate(calculateRate(totalPL, first.getTotalAsset()))
-                .annualizedReturn(annualizedReturn)
                 .maxDrawdown(maxDrawdown)
                 .maxDrawdownDate(maxDrawdownDate)
                 .tradingStartDate(first.getSnapshotDate().toString())

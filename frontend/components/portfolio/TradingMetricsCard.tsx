@@ -9,7 +9,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { 
   TrendingUp, 
-  TrendingDown, 
   BarChart3, 
   Calendar,
   Target,
@@ -38,7 +37,7 @@ export function TradingMetricsCard({ metrics }: TradingMetricsCardProps) {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-3 gap-4">
             <MetricItem
               label="총 수익률"
               value={formatPercent(metrics.totalProfitRate)}
@@ -46,16 +45,10 @@ export function TradingMetricsCard({ metrics }: TradingMetricsCardProps) {
               tooltip="투자 시작 이후 누적 수익률"
             />
             <MetricItem
-              label="연환산 수익률"
-              value={formatPercent(metrics.annualizedReturn)}
-              colorClass={getProfitColorClass(metrics.annualizedReturn)}
-              tooltip="1년 기준으로 환산한 수익률"
-            />
-            <MetricItem
               label="최대 수익률"
               value={formatPercent(metrics.maxProfitRate)}
               colorClass="text-red-500"
-              tooltip="기간 중 달성한 최대 수익률"
+              tooltip="단일 거래에서 달성한 최대 수익률"
             />
             <MetricItem
               label="총 손익"

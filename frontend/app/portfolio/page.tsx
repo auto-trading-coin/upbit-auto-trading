@@ -534,32 +534,7 @@ export default function PortfolioPage() {
               </div>
 
               {/* 기간 선택 탭 + 연월 선택 */}
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                {/* 수익률 계산 방식 선택 (업비트 스타일) */}
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="text-xs"
-                  >
-                    금액가중수익률
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-xs text-muted-foreground"
-                  >
-                    시간가중수익률
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-xs text-muted-foreground"
-                  >
-                    단순수익률
-                  </Button>
-                </div>
-
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-4">
                 {/* 기간 타입 + 연월 선택 */}
                 <div className="flex items-center gap-2">
                   <div className="flex rounded-lg border overflow-hidden">

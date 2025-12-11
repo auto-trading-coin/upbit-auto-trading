@@ -74,11 +74,14 @@ export interface YearlyProfitItem {
 
 /**
  * 자동매매 성과 지표 (전체 기간)
+ * 
+ * 지표별 기준:
+ * - 일별 기준 (AccountHistory): MDD, 총 수익률
+ * - 건당 기준 (TradingStatistics): 최대 수익률/손실률, 승률, 거래 통계
  */
 export interface TradingMetrics {
   // 수익률 지표
   totalProfitRate: number          // 총 수익률 (%)
-  annualizedReturn: number         // 연환산 수익률 (%)
   maxProfitRate: number            // 최대 수익률 (%)
   
   // 손실 지표
