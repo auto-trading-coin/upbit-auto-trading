@@ -59,17 +59,24 @@ public class ChartDeltaSyncExecutor {
                 break;
             }
 
-            // 중복 제거 (lastSyncedAt 이후 캔들만)
+            // 중복 제거 (lastSyncedAt 이후 캔들만) + 완성된 캔들만 필터링
+            LocalDateTime now = LocalDateTime.now();
+            int candleMinutes = (unit == 1440) ? 1440 : unit;
+
+            // 필터조건 :
+            // 1. 가장최신 싱크된 캔들 이후의 캔들만 저장
+            // 2. 미완성된 가장 최신캔들 1개 제외
             List<UpbitCandleResponse> filtered = responseList.stream()
                     .filter(candle -> candle.getParsedDateTime().isAfter(maxSyncedAt))
-                    .toList();  // 또는 collect(Collectors.toList())
+                    .filter(candle -> candle.getParsedDateTime().plusMinutes(candleMinutes).isBefore(now))
+                    .toList();
 
             // 차트 데이터 DB저장
             totalSyncedCount += persistHelper.persistByUnit(filtered, market, unit);
 
-            // 가장 최근 데이터 기준 시각 기억
-            if (deltaSyncedLatestTime == null) {
-                deltaSyncedLatestTime = responseList.get(0).getParsedDateTime();
+            // 가장 최근 데이터 기준 시각 기억 (완성된 캔들 중에서)
+            if (deltaSyncedLatestTime == null && !filtered.isEmpty()) {
+                deltaSyncedLatestTime = filtered.get(0).getParsedDateTime();
             }
 
             // 더욱 이전 데이터 불러 오도록 시각 뒤로
