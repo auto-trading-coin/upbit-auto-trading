@@ -33,11 +33,7 @@ export interface UpdateStrategyRequest {
   strategyId: number
 }
 
-// Trading Settings
-export interface TradingSettings {
-  stopLossEnabled: boolean
-  stopLossLimit: number
-}
+
 
 // API Key State
 export interface ApiKeyState {
