@@ -6,7 +6,6 @@
 
 // 보유자산 관련
 export { HoldingsTable } from './HoldingsTable'
-export { PortfolioSummary } from './PortfolioSummary'
 
 // 투자손익 관련
 export { InvestmentProfitHeader } from './InvestmentProfitHeader'
