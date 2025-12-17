@@ -9,8 +9,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ArrowDown, ArrowUp, ArrowUpDown, ExternalLink, Search, TrendingUp, TrendingDown, Minus, Languages } from "lucide-react"
 import { useMarkets } from "@/hooks/queries/useMarkets"
 import { useFilterStore } from "@/stores"
-import { LoadingSpinner } from "@/components/common"
+import { LoadingSpinner, MobileDataCard, MobileCardGrid } from "@/components/common"
 import { useIsMounted } from "@/hooks/useIsMounted"
+import { useIsMobile } from "@/hooks/use-mobile"
 import type { MarketData } from "@/types"
 
 type SortKey = 'name' | 'price' | 'changeRate' | 'changePrice' | 'tradePrice' | 'tradeVolume'
@@ -19,6 +20,7 @@ type SortOrder = 'asc' | 'desc'
 export default function MarketPage() {
   // 클라이언트 마운트 확인 (Hydration mismatch 방지)
   const isMounted = useIsMounted()
+  const isMobile = useIsMobile()
   
   // React Query로 실시간 시세 조회 (WebSocket 자동 연결)
   const { data: markets = [], isLoading } = useMarkets()
@@ -169,6 +171,71 @@ export default function MarketPage() {
       : <ArrowDown className="h-3 w-3 ml-1" />
   }
 
+  // 변동률 색상 클래스
+  const getChangeColorClass = (change: string) => {
+    if (change === 'RISE') return 'text-red-500'
+    if (change === 'FALL') return 'text-blue-500'
+    return ''
+  }
+
+  // 모바일 카드 리스트 렌더링
+  const renderMobileMarketList = (data: MarketData[]) => {
+    if (data.length === 0) {
+      return (
+        <div className="p-8 text-center text-muted-foreground">
+          검색 결과가 없습니다.
+        </div>
+      )
+    }
+
+    return (
+      <MobileCardGrid>
+        {data.map((item) => {
+          const colorClass = getChangeColorClass(item.change)
+          const changeSign = item.change === 'RISE' ? '+' : item.change === 'FALL' ? '-' : ''
+          
+          return (
+            <MobileDataCard
+              key={item.market}
+              header={showKoreanName ? item.koreanName : item.englishName}
+              subHeader={item.market}
+              headerRight={
+                <div className={`flex items-center gap-1 ${colorClass}`}>
+                  {renderChangeIcon(item.change)}
+                  <span className="text-sm font-bold">
+                    {changeSign}{item.changeRate.toFixed(2)}%
+                  </span>
+                </div>
+              }
+              onClick={() => handleCoinClick(item.market)}
+              rows={[
+                {
+                  label: '현재가',
+                  value: `${item.currentPrice.toLocaleString()}원`,
+                  valueClassName: colorClass,
+                },
+                {
+                  label: '변동가',
+                  value: `${changeSign}${item.changePrice.toLocaleString()}`,
+                  valueClassName: colorClass,
+                },
+                {
+                  label: '거래대금(24h)',
+                  value: formatPrice(item.accTradePrice24h),
+                },
+                {
+                  label: '거래량(24h)',
+                  value: formatVolume(item.accTradeVolume24h),
+                },
+              ]}
+            />
+          )
+        })}
+      </MobileCardGrid>
+    )
+  }
+
+  // PC 테이블 렌더링
   const renderMarketList = (data: MarketData[]) => {
     if (data.length === 0) {
       return (
@@ -312,27 +379,29 @@ export default function MarketPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">실시간 시세</h1>
           <p className="text-sm text-muted-foreground mt-1">
             업비트 API 실시간 WebSocket 연동
           </p>
         </div>
-        <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+        <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 w-fit">
           <div className="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse" />
           실시간 업데이트
         </Badge>
       </div>
 
-      <div className="flex items-center space-x-2">
-        <Search className="h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="코인명 또는 심볼 검색 (예: 비트코인, BTC)"
-          value={filter.searchTerm}
-          onChange={(e) => setMarketSearch(e.target.value)}
-          className="max-w-sm"
-        />
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+        <div className="flex items-center space-x-2 flex-1">
+          <Search className="h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="코인명 또는 심볼 검색 (예: 비트코인, BTC)"
+            value={filter.searchTerm}
+            onChange={(e) => setMarketSearch(e.target.value)}
+            className="flex-1 sm:max-w-sm"
+          />
+        </div>
         <Button
           variant="outline"
           size="sm"
@@ -345,15 +414,15 @@ export default function MarketPage() {
       </div>
 
       <Tabs defaultValue="all" className="w-full">
-        <TabsList>
-          <TabsTrigger value="all">
+        <TabsList className="w-full sm:w-auto">
+          <TabsTrigger value="all" className="flex-1 sm:flex-initial">
             전체 ({sortedMarkets.length})
           </TabsTrigger>
-          <TabsTrigger value="rise" className="text-red-500">
+          <TabsTrigger value="rise" className="text-red-500 flex-1 sm:flex-initial">
             <TrendingUp className="h-4 w-4 mr-1" />
             상승 ({riseMarkets.length})
           </TabsTrigger>
-          <TabsTrigger value="fall" className="text-blue-500">
+          <TabsTrigger value="fall" className="text-blue-500 flex-1 sm:flex-initial">
             <TrendingDown className="h-4 w-4 mr-1" />
             하락 ({fallMarkets.length})
           </TabsTrigger>
@@ -368,7 +437,7 @@ export default function MarketPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {renderMarketList(sortedMarkets)}
+              {isMobile ? renderMobileMarketList(sortedMarkets) : renderMarketList(sortedMarkets)}
             </CardContent>
           </Card>
         </TabsContent>
@@ -385,7 +454,7 @@ export default function MarketPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {renderMarketList(riseMarkets)}
+              {isMobile ? renderMobileMarketList(riseMarkets) : renderMarketList(riseMarkets)}
             </CardContent>
           </Card>
         </TabsContent>
@@ -402,7 +471,7 @@ export default function MarketPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {renderMarketList(fallMarkets)}
+              {isMobile ? renderMobileMarketList(fallMarkets) : renderMarketList(fallMarkets)}
             </CardContent>
           </Card>
         </TabsContent>

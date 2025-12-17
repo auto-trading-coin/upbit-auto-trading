@@ -29,15 +29,15 @@ export function TradingMetricsCard({ metrics }: TradingMetricsCardProps) {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <TrendingUp className="h-5 w-5" />
-            수익률 현황
+            <TrendingUp className="h-5 w-5 flex-shrink-0" />
+            <span>수익률 현황</span>
           </CardTitle>
           <CardDescription>
             {metrics.tradingStartDate} 부터 현재까지의 성과
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
             <MetricItem
               label="총 수익률"
               value={formatPercent(metrics.totalProfitRate)}
@@ -64,15 +64,15 @@ export function TradingMetricsCard({ metrics }: TradingMetricsCardProps) {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <AlertTriangle className="h-5 w-5" />
-            리스크 지표
+            <AlertTriangle className="h-5 w-5 flex-shrink-0" />
+            <span>리스크 지표</span>
           </CardTitle>
           <CardDescription>
             자동매매 리스크 관리 현황
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
             <MetricItem
               label="최대 낙폭 (MDD)"
               value={formatPercent(metrics.maxDrawdown)}
@@ -99,12 +99,12 @@ export function TradingMetricsCard({ metrics }: TradingMetricsCardProps) {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <BarChart3 className="h-5 w-5" />
-            거래 통계
+            <BarChart3 className="h-5 w-5 flex-shrink-0" />
+            <span>거래 통계</span>
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
             <MetricItem
               label="총 거래 횟수"
               value={`${metrics.totalTrades}회`}
@@ -137,12 +137,12 @@ export function TradingMetricsCard({ metrics }: TradingMetricsCardProps) {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Target className="h-5 w-5" />
-            투자 현황
+            <Target className="h-5 w-5 flex-shrink-0" />
+            <span>투자 현황</span>
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
             <MetricItem
               label="총 투자금액"
               value={formatCurrency(metrics.totalInvested)}
@@ -156,7 +156,7 @@ export function TradingMetricsCard({ metrics }: TradingMetricsCardProps) {
             <MetricItem
               label="거래 시작일"
               value={metrics.tradingStartDate}
-              icon={<Calendar className="h-4 w-4" />}
+              icon={<Calendar className="h-4 w-4 flex-shrink-0" />}
             />
             <MetricItem
               label="총 거래일수"
@@ -192,15 +192,15 @@ function MetricItem({
   isHighlighted = false,
 }: MetricItemProps) {
   const content = (
-    <div className={`p-4 rounded-lg ${isHighlighted ? 'bg-muted' : 'bg-muted/30'}`}>
+    <div className={`p-3 sm:p-4 rounded-lg ${isHighlighted ? 'bg-muted' : 'bg-muted/30'} overflow-hidden`}>
       <div className="flex items-center gap-1 text-xs text-muted-foreground mb-1">
         {icon}
-        <span>{label}</span>
+        <span className="truncate">{label}</span>
         {tooltip && (
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger>
-                <HelpCircle className="h-3 w-3" />
+                <HelpCircle className="h-3 w-3 flex-shrink-0" />
               </TooltipTrigger>
               <TooltipContent>
                 <p className="max-w-[200px]">{tooltip}</p>
@@ -209,7 +209,7 @@ function MetricItem({
           </TooltipProvider>
         )}
       </div>
-      <p className={`text-lg font-semibold ${colorClass}`}>
+      <p className={`text-base sm:text-lg font-semibold ${colorClass} break-words`}>
         {value}
       </p>
     </div>

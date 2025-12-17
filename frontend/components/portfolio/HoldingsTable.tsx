@@ -2,6 +2,8 @@
 
 import { LineChart } from 'lucide-react'
 import { formatCurrency, formatAmount, formatPercent, getProfitColorClass } from '@/lib/utils/format'
+import { MobileDataCard, MobileCardGrid, MobileSummaryCard } from '@/components/common'
+import { useIsMobile } from '@/hooks/use-mobile'
 import type { HoldingWithPrice } from '@/hooks/usePortfolioCalculation'
 
 interface HoldingsTableProps {
@@ -40,16 +42,7 @@ interface HoldingsTableProps {
  * 보유 자산 테이블 컴포넌트
  * 
  * 대시보드와 자산현황 페이지에서 공통으로 사용되는 보유 자산 목록 테이블입니다.
- * 
- * @example
- * ```tsx
- * <HoldingsTable
- *   holdings={holdingsWithPrice}
- *   totalBuyAmount={coinTotalBuyAmount}
- *   totalEvaluationAmount={coinEvaluationAmount}
- *   totalProfitAmount={totalProfitAmount}
- * />
- * ```
+ * PC에서는 테이블, 모바일에서는 카드 레이아웃으로 표시됩니다.
  */
 export function HoldingsTable({
   holdings,
@@ -59,6 +52,8 @@ export function HoldingsTable({
   emptyMessage = '보유 중인 코인이 없습니다',
   emptySubMessage = '자동매매가 시작되면 이곳에 코인 정보가 표시됩니다',
 }: HoldingsTableProps) {
+  const isMobile = useIsMobile()
+
   if (holdings.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-8 text-center">
@@ -71,6 +66,78 @@ export function HoldingsTable({
 
   const profitColorClass = getProfitColorClass(totalProfitAmount)
 
+  // 모바일 레이아웃
+  if (isMobile) {
+    return (
+      <MobileCardGrid>
+        {holdings.map((holding) => {
+          const colorClass = getProfitColorClass(holding.profitAmount)
+          
+          return (
+            <MobileDataCard
+              key={holding.market}
+              header={holding.koreanName}
+              subHeader={holding.market}
+              headerRight={
+                <div className={`text-sm font-bold ${colorClass}`}>
+                  {formatPercent(holding.profitRate)}
+                </div>
+              }
+              rows={[
+                {
+                  label: '보유량',
+                  value: formatAmount(holding.amount),
+                },
+                {
+                  label: '평균 매수가',
+                  value: formatCurrency(holding.avgBuyPrice),
+                },
+                {
+                  label: '총 매수금액',
+                  value: formatCurrency(holding.buyAmount),
+                },
+                {
+                  label: '현재가',
+                  value: formatCurrency(holding.currentPrice),
+                  valueClassName: colorClass,
+                },
+                {
+                  label: '평가금액',
+                  value: formatCurrency(holding.evaluationAmount),
+                },
+                {
+                  label: '평가손익',
+                  value: formatCurrency(holding.profitAmount, true),
+                  valueClassName: colorClass,
+                },
+              ]}
+            />
+          )
+        })}
+
+        {/* 합계 */}
+        <MobileSummaryCard
+          rows={[
+            {
+              label: '총 매수금액',
+              value: formatCurrency(totalBuyAmount),
+            },
+            {
+              label: '총 평가금액',
+              value: formatCurrency(totalEvaluationAmount),
+            },
+            {
+              label: '총 평가손익',
+              value: formatCurrency(totalProfitAmount, true),
+              valueClassName: profitColorClass,
+            },
+          ]}
+        />
+      </MobileCardGrid>
+    )
+  }
+
+  // PC 테이블 레이아웃
   return (
     <div className="rounded-md border">
       {/* 테이블 헤더 */}

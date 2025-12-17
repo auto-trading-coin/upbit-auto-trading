@@ -14,7 +14,7 @@ import {
   Wallet,
   Info,
 } from "lucide-react"
-import { AuthGuard, LoadingSpinner } from "@/components/common"
+import { AuthGuard, LoadingSpinner, MobileSummaryCard } from "@/components/common"
 import { 
   HoldingsTable, 
   InvestmentProfitHeader,
@@ -34,6 +34,7 @@ import {
   useAvailableYears,
 } from "@/hooks/queries/useInvestmentProfit"
 import { useIsMounted } from "@/hooks/useIsMounted"
+import { useIsMobile } from "@/hooks/use-mobile"
 import { formatCurrency, formatPercent, formatAmount, getProfitColorClass } from "@/lib/utils/format"
 import type { InvestmentPeriodType, ProfitChartData } from "@/types"
 
@@ -61,6 +62,7 @@ const CHART_COLORS = [
 export default function PortfolioPage() {
   // Hydration mismatch 방지
   const isMounted = useIsMounted()
+  const isMobile = useIsMobile()
   
   // React Query hooks
   const { data: user, isLoading: userLoading } = useUser()
@@ -205,7 +207,7 @@ export default function PortfolioPage() {
   return (
     <AuthGuard>
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <h1 className="text-3xl font-bold tracking-tight">자산 현황</h1>
           <Button onClick={() => router.push("/")} variant="outline">
             대시보드로 돌아가기
@@ -252,10 +254,10 @@ export default function PortfolioPage() {
           </div>
         ) : (
           <Tabs defaultValue="portfolio" className="w-full">
-            <TabsList>
-              <TabsTrigger value="portfolio">포트폴리오</TabsTrigger>
-              <TabsTrigger value="holdings">보유 자산</TabsTrigger>
-              <TabsTrigger value="history">투자손익</TabsTrigger>
+            <TabsList className="w-full sm:w-auto">
+              <TabsTrigger value="portfolio" className="flex-1 sm:flex-initial">포트폴리오</TabsTrigger>
+              <TabsTrigger value="holdings" className="flex-1 sm:flex-initial">보유 자산</TabsTrigger>
+              <TabsTrigger value="history" className="flex-1 sm:flex-initial">투자손익</TabsTrigger>
             </TabsList>
 
             {/* 포트폴리오 탭 */}
@@ -266,14 +268,14 @@ export default function PortfolioPage() {
                 </div>
               ) : (
                 <>
-                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                  <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
                     <Card>
                       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">총 자산</CardTitle>
                         <DollarSign className="h-4 w-4 text-muted-foreground" />
                       </CardHeader>
                       <CardContent>
-                        <div className="text-2xl font-bold">{formatCurrency(totalAsset)}</div>
+                        <div className="text-xl sm:text-2xl font-bold">{formatCurrency(totalAsset)}</div>
                         <p className="text-xs text-muted-foreground mt-2">원화 + 코인 평가금액</p>
                       </CardContent>
                     </Card>
@@ -284,7 +286,7 @@ export default function PortfolioPage() {
                         <Wallet className="h-4 w-4 text-muted-foreground" />
                       </CardHeader>
                       <CardContent>
-                        <div className="text-2xl font-bold">{formatCurrency(cashBalance)}</div>
+                        <div className="text-xl sm:text-2xl font-bold">{formatCurrency(cashBalance)}</div>
                         <p className="text-xs text-muted-foreground mt-2">사용 가능한 원화 잔액</p>
                       </CardContent>
                     </Card>
@@ -295,9 +297,9 @@ export default function PortfolioPage() {
                         <LineChart className="h-4 w-4 text-muted-foreground" />
                       </CardHeader>
                       <CardContent>
-                        <div className="text-2xl font-bold">{formatCurrency(coinEvaluationAmount)}</div>
+                        <div className="text-xl sm:text-2xl font-bold">{formatCurrency(coinEvaluationAmount)}</div>
                         <p className="text-xs text-muted-foreground mt-2">
-                          매수금액: {formatCurrency(coinTotalBuyAmount)}
+                          매수: {formatCurrency(coinTotalBuyAmount)}
                         </p>
                       </CardContent>
                     </Card>
@@ -308,7 +310,7 @@ export default function PortfolioPage() {
                         <LineChart className="h-4 w-4 text-muted-foreground" />
                       </CardHeader>
                       <CardContent>
-                        <div className={`text-2xl font-bold ${getProfitColorClass(totalProfitAmount)}`}>
+                        <div className={`text-xl sm:text-2xl font-bold ${getProfitColorClass(totalProfitAmount)}`}>
                           {formatCurrency(totalProfitAmount, true)}
                         </div>
                         <p className={`text-xs mt-2 ${getProfitColorClass(totalProfitRate)}`}>
@@ -328,21 +330,21 @@ export default function PortfolioPage() {
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                         <div className="p-4 bg-muted/30 rounded-lg">
                           <p className="text-xs text-muted-foreground">총 매수금액</p>
-                          <p className="text-lg font-semibold">{formatCurrency(coinTotalBuyAmount)}</p>
+                          <p className="text-base sm:text-lg font-semibold">{formatCurrency(coinTotalBuyAmount)}</p>
                         </div>
                         <div className="p-4 bg-muted/30 rounded-lg">
                           <p className="text-xs text-muted-foreground">총 평가금액</p>
-                          <p className="text-lg font-semibold">{formatCurrency(coinEvaluationAmount)}</p>
+                          <p className="text-base sm:text-lg font-semibold">{formatCurrency(coinEvaluationAmount)}</p>
                         </div>
                         <div className="p-4 bg-muted/30 rounded-lg">
                           <p className="text-xs text-muted-foreground">평가 손익</p>
-                          <p className={`text-lg font-semibold ${getProfitColorClass(totalProfitAmount)}`}>
+                          <p className={`text-base sm:text-lg font-semibold ${getProfitColorClass(totalProfitAmount)}`}>
                             {formatCurrency(totalProfitAmount, true)}
                           </p>
                         </div>
                         <div className="p-4 bg-muted/30 rounded-lg">
                           <p className="text-xs text-muted-foreground">수익률</p>
-                          <p className={`text-lg font-semibold ${getProfitColorClass(totalProfitRate)}`}>
+                          <p className={`text-base sm:text-lg font-semibold ${getProfitColorClass(totalProfitRate)}`}>
                             {formatPercent(totalProfitRate)}
                           </p>
                         </div>
@@ -366,12 +368,12 @@ export default function PortfolioPage() {
                           </p>
                         </div>
                       ) : (
-                        <div className="flex flex-col lg:flex-row gap-8 items-start">
+                        <div className="flex flex-col lg:flex-row gap-8 items-center lg:items-start">
                           {/* 도넛 차트 */}
-                          <div className="w-72 h-72 relative mx-auto lg:mx-0">
+                          <div className="w-64 h-64 sm:w-72 sm:h-72 relative mx-auto lg:mx-0 flex-shrink-0">
                             <div className="absolute inset-0 flex items-center justify-center flex-col">
                               <p className="text-sm text-muted-foreground">총 자산</p>
-                              <p className="text-xl font-bold">₩{totalAsset.toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
+                              <p className="text-lg sm:text-xl font-bold">₩{totalAsset.toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
                             </div>
                             <svg width="100%" height="100%" viewBox="0 0 100 100">
                               <circle cx="50" cy="50" r="40" fill="white" stroke="#e2e8f0" strokeWidth="1" />
@@ -430,7 +432,7 @@ export default function PortfolioPage() {
                           </div>
 
                           {/* 자산 목록 */}
-                          <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-3">
+                          <div className="flex-1 w-full grid grid-cols-1 sm:grid-cols-2 gap-3">
                             {pieChartData.map((item, index) => {
                               const holding = holdingsWithPrice.find(
                                 h => h.market.replace("KRW-", "") === item.name
@@ -438,18 +440,18 @@ export default function PortfolioPage() {
 
                               return (
                                 <div key={index} className="flex items-center justify-between p-3 rounded-lg border">
-                                  <div className="flex items-center gap-2">
-                                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }}></div>
-                                    <div>
-                                      <p className="font-medium">{item.koreanName}</p>
+                                  <div className="flex items-center gap-2 min-w-0">
+                                    <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }}></div>
+                                    <div className="min-w-0">
+                                      <p className="font-medium truncate">{item.koreanName}</p>
                                       {holding && (
-                                        <p className="text-xs text-muted-foreground">
+                                        <p className="text-xs text-muted-foreground truncate">
                                           보유량: {formatAmount(holding.amount)}
                                         </p>
                                       )}
                                     </div>
                                   </div>
-                                  <div className="text-right">
+                                  <div className="text-right flex-shrink-0 ml-2">
                                     <p className="font-medium">{formatCurrency(item.rawValue)}</p>
                                     <p className="text-xs text-muted-foreground">{item.value.toFixed(2)}%</p>
                                   </div>
@@ -496,29 +498,43 @@ export default function PortfolioPage() {
                         emptySubMessage="코인을 매수하면 이곳에 표시됩니다"
                       />
                       
-                      {/* 원화 + 총합 행 */}
-                      <div className="rounded-md border">
-                        <div className="grid grid-cols-7 gap-4 p-4 bg-muted/30">
-                          <div className="font-medium">원화 (KRW)</div>
-                          <div className="text-right">-</div>
-                          <div className="text-right">-</div>
-                          <div className="text-right">-</div>
-                          <div className="text-right">-</div>
-                          <div className="text-right font-medium">{formatCurrency(cashBalance)}</div>
-                          <div className="text-right">-</div>
-                        </div>
-                        <div className="grid grid-cols-7 gap-4 p-4 bg-muted font-semibold border-t">
-                          <div>총 자산</div>
-                          <div className="text-right">-</div>
-                          <div className="text-right">-</div>
-                          <div className="text-right">-</div>
-                          <div className="text-right">-</div>
-                          <div className="text-right">{formatCurrency(totalAsset)}</div>
-                          <div className={`text-right ${getProfitColorClass(totalProfitAmount)}`}>
-                            {formatCurrency(totalProfitAmount, true)}
+                      {/* 원화 + 총합 - 모바일/PC 분기 */}
+                      {isMobile ? (
+                        <MobileSummaryCard
+                          rows={[
+                            { label: '원화 (KRW)', value: formatCurrency(cashBalance) },
+                            { label: '총 자산', value: formatCurrency(totalAsset) },
+                            { 
+                              label: '총 평가손익', 
+                              value: formatCurrency(totalProfitAmount, true),
+                              valueClassName: getProfitColorClass(totalProfitAmount),
+                            },
+                          ]}
+                        />
+                      ) : (
+                        <div className="rounded-md border">
+                          <div className="grid grid-cols-7 gap-4 p-4 bg-muted/30">
+                            <div className="font-medium">원화 (KRW)</div>
+                            <div className="text-right">-</div>
+                            <div className="text-right">-</div>
+                            <div className="text-right">-</div>
+                            <div className="text-right">-</div>
+                            <div className="text-right font-medium">{formatCurrency(cashBalance)}</div>
+                            <div className="text-right">-</div>
+                          </div>
+                          <div className="grid grid-cols-7 gap-4 p-4 bg-muted font-semibold border-t">
+                            <div>총 자산</div>
+                            <div className="text-right">-</div>
+                            <div className="text-right">-</div>
+                            <div className="text-right">-</div>
+                            <div className="text-right">-</div>
+                            <div className="text-right">{formatCurrency(totalAsset)}</div>
+                            <div className={`text-right ${getProfitColorClass(totalProfitAmount)}`}>
+                              {formatCurrency(totalProfitAmount, true)}
+                            </div>
                           </div>
                         </div>
-                      </div>
+                      )}
                     </div>
                   )}
                 </CardContent>
@@ -534,12 +550,13 @@ export default function PortfolioPage() {
               </div>
 
               {/* 기간 선택 탭 + 연월 선택 */}
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-4">
+              <div className="flex flex-col gap-4">
                 {/* 기간 타입 + 연월 선택 */}
-                <div className="flex items-center gap-2">
-                  <div className="flex rounded-lg border overflow-hidden">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-2">
+                  {/* 기간 타입 버튼 */}
+                  <div className="flex rounded-lg border overflow-hidden w-full sm:w-auto">
                     <button
-                      className={`px-3 py-1.5 text-sm transition-colors ${
+                      className={`flex-1 sm:flex-initial px-3 py-1.5 text-sm transition-colors ${
                         periodType === 'daily' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'
                       }`}
                       onClick={() => setPeriodType('daily')}
@@ -547,7 +564,7 @@ export default function PortfolioPage() {
                       일별
                     </button>
                     <button
-                      className={`px-3 py-1.5 text-sm transition-colors border-l ${
+                      className={`flex-1 sm:flex-initial px-3 py-1.5 text-sm transition-colors border-l ${
                         periodType === 'monthly' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'
                       }`}
                       onClick={() => setPeriodType('monthly')}
@@ -555,7 +572,7 @@ export default function PortfolioPage() {
                       월별
                     </button>
                     <button
-                      className={`px-3 py-1.5 text-sm transition-colors border-l ${
+                      className={`flex-1 sm:flex-initial px-3 py-1.5 text-sm transition-colors border-l ${
                         periodType === 'yearly' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'
                       }`}
                       onClick={() => setPeriodType('yearly')}
@@ -563,7 +580,7 @@ export default function PortfolioPage() {
                       연도별
                     </button>
                     <button
-                      className={`px-3 py-1.5 text-sm transition-colors border-l ${
+                      className={`flex-1 sm:flex-initial px-3 py-1.5 text-sm transition-colors border-l ${
                         periodType === 'all' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'
                       }`}
                       onClick={() => setPeriodType('all')}
@@ -572,42 +589,45 @@ export default function PortfolioPage() {
                     </button>
                   </div>
 
-                  {/* 연도 선택 */}
+                  {/* 연도/월 선택 */}
                   {(periodType === 'daily' || periodType === 'monthly') && (
-                    <Select 
-                      value={String(selectedYear)} 
-                      onValueChange={(v) => setSelectedYear(Number(v))}
-                    >
-                      <SelectTrigger className="w-[120px]">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {(availableYears.length > 0 ? availableYears : [currentDate.getFullYear()]).map(year => (
-                          <SelectItem key={year} value={String(year)}>
-                            {year}년
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
+                    <div className="flex gap-2">
+                      {/* 연도 선택 */}
+                      <Select 
+                        value={String(selectedYear)} 
+                        onValueChange={(v) => setSelectedYear(Number(v))}
+                      >
+                        <SelectTrigger className="flex-1 sm:w-[120px]">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {(availableYears.length > 0 ? availableYears : [currentDate.getFullYear()]).map(year => (
+                            <SelectItem key={year} value={String(year)}>
+                              {year}년
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
 
-                  {/* 월 선택 (일별 보기일 때만) */}
-                  {periodType === 'daily' && (
-                    <Select 
-                      value={String(selectedMonth)} 
-                      onValueChange={(v) => setSelectedMonth(Number(v))}
-                    >
-                      <SelectTrigger className="w-[100px]">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {months.map(month => (
-                          <SelectItem key={month} value={String(month)}>
-                            {month}월
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      {/* 월 선택 (일별 보기일 때만) */}
+                      {periodType === 'daily' && (
+                        <Select 
+                          value={String(selectedMonth)} 
+                          onValueChange={(v) => setSelectedMonth(Number(v))}
+                        >
+                          <SelectTrigger className="flex-1 sm:w-[100px]">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {months.map(month => (
+                              <SelectItem key={month} value={String(month)}>
+                                {month}월
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+                    </div>
                   )}
                 </div>
               </div>
