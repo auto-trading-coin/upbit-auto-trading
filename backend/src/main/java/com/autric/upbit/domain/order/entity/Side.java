@@ -1,6 +1,6 @@
 package com.autric.upbit.domain.order.entity;
 
-import com.autric.upbit.util.EnumUtil;
+import com.autric.upbit.global.util.EnumUtil;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonValue;
 

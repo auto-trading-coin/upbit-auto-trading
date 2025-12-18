@@ -1,4 +1,4 @@
-package com.autric.upbit.util;
+package com.autric.upbit.global.util;
 
 import java.util.Arrays;
 
