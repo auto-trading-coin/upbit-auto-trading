@@ -121,33 +121,42 @@ public class AccountService {
             Optional<AccountHistory> prevHistoryOpt = accountRepository
                     .findTopByMemberAndSnapshotDateBeforeOrderBySnapshotDateDesc(member, snapshotDate);
 
-            // 전일 총자산 (없으면 오늘 총자산으로 대체 → 첫 스냅샷인 경우)
-            long prevTotalAsset = prevHistoryOpt.map(AccountHistory::getTotalAsset).orElse(totalAsset);
+            long dailyProfitLoss;
+            BigDecimal dailyProfitRate;
 
-            /**
-             * 일일 손익 계산
-             *
-             * 공식: (오늘 총자산 - 어제 총자산) - (입금 - 출금)
-             *
-             * 예시:
-             * - 어제 100만원, 오늘 120만원, 입금 10만원
-             * - 단순 차이: 120 - 100 = +20만원
-             * - 실제 손익: 20 - 10 = +10만원 (입금 제외)
-             */
-            long dailyProfitLoss = (totalAsset - prevTotalAsset) - (deposit - withdrawal);
+            if (prevHistoryOpt.isEmpty()) {
+                /**
+                 * 첫 스냅샷인 경우: 비교 대상이 없으므로 손익 0으로 처리
+                 */
+                dailyProfitLoss = 0;
+                dailyProfitRate = BigDecimal.ZERO;
+            } else {
+                /**
+                 * 일일 손익 계산
+                 *
+                 * 공식: (오늘 총자산 - 어제 총자산) - (입금 - 출금)
+                 *
+                 * 예시:
+                 * - 어제 100만원, 오늘 120만원, 입금 10만원
+                 * - 단순 차이: 120 - 100 = +20만원
+                 * - 실제 손익: 20 - 10 = +10만원 (입금 제외)
+                 */
+                long prevTotalAsset = prevHistoryOpt.get().getTotalAsset();
+                dailyProfitLoss = (totalAsset - prevTotalAsset) - (deposit - withdrawal);
 
-            /**
-             * 일일 수익률 계산
-             *
-             * 공식: 일일손익 / 전일 총자산 × 100
-             *
-             * 예시:
-             * - 전일 100만원, 일일손익 +10만원
-             * - 수익률: 10 / 100 × 100 = 10%
-             */
-            BigDecimal dailyProfitRate = prevTotalAsset > 0
-                    ? BigDecimal.valueOf(dailyProfitLoss * 100).divide(BigDecimal.valueOf(prevTotalAsset), 4, RoundingMode.HALF_UP)
-                    : BigDecimal.ZERO;
+                /**
+                 * 일일 수익률 계산
+                 *
+                 * 공식: 일일손익 / 전일 총자산 × 100
+                 *
+                 * 예시:
+                 * - 전일 100만원, 일일손익 +10만원
+                 * - 수익률: 10 / 100 × 100 = 10%
+                 */
+                dailyProfitRate = prevTotalAsset > 0
+                        ? BigDecimal.valueOf(dailyProfitLoss * 100).divide(BigDecimal.valueOf(prevTotalAsset), 4, RoundingMode.HALF_UP)
+                        : BigDecimal.ZERO;
+            }
 
             // 스냅샷 저장
             AccountHistory history = AccountHistory.builder()
