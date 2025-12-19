@@ -18,7 +18,7 @@ public class UpbitOrderCalculatorService {
 
     private final UpbitApiClient upbitApiClient;
 
-    public String getVolume(List<UpbitAccountResponse> accounts, String market) {
+    public String getVolume(List<UpbitAccountResponse> accounts, String market, BigDecimal curPrice) {
         String baseCurrency = market.split("-")[1];
 
         for(UpbitAccountResponse dto : accounts){
@@ -31,8 +31,8 @@ public class UpbitOrderCalculatorService {
                 if (available.compareTo(BigDecimal.ZERO) <= 0) return null;
 
                 // 현재 코인의 시세 조회
-                UpbitTradePriceResponse res = upbitApiClient.getCurrentPrice(market);
-                BigDecimal curPrice = res.getTradePrice();
+//                UpbitTradePriceResponse res = upbitApiClient.getCurrentPrice(market);
+//                BigDecimal curPrice = res.getTradePrice();
 
                 // 현재 보유한 코인의 수량 * 시세 (5천원 이상이어야 함)
                 BigDecimal price = available.multiply(curPrice);

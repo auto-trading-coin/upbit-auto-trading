@@ -15,6 +15,7 @@ import com.autric.upbit.external.kafka.dto.SignalMessage;
 import com.autric.upbit.external.upbit.client.UpbitApiClient;
 import com.autric.upbit.external.upbit.dto.response.UpbitAccountResponse;
 import com.autric.upbit.external.upbit.dto.response.UpbitOrderResponse;
+import com.autric.upbit.external.upbit.dto.response.UpbitTradePriceResponse;
 import com.autric.upbit.external.upbit.dto.response.UpbitTradeResponse;
 import com.autric.upbit.external.upbit.service.UpbitOrderCalculatorService;
 import lombok.RequiredArgsConstructor;
@@ -53,6 +54,10 @@ public class SignalProcessingService {
         Market market = marketService.getMarketByCoin(msg.getMarket());
         Signals signal = signalService.createSignal(msg, market, strategy);
 
+        // 현재 처리할 코인의 시세 확인
+        UpbitTradePriceResponse priceRes = upbitApiClient.getCurrentPrice(msg.getMarket());
+        BigDecimal curPrice = priceRes.getTradePrice();
+
         for (Member m : members) {
             UpbitApiKey apiKey = m.getUpbitApiKey();
             if (apiKey == null) {
@@ -65,7 +70,7 @@ public class SignalProcessingService {
                         apiKey.getSecretKey());
 
                 String price = upbitOrderCalculatorService.getPrice(accounts);
-                String volume = upbitOrderCalculatorService.getVolume(accounts, msg.getMarket());
+                String volume = upbitOrderCalculatorService.getVolume(accounts, msg.getMarket(), curPrice);
 
                 // 주문 자산이 부족(5천원 미만)하거나, 매도 수량이 부족할 경우 continue
                 if ((msg.getSide().equals("bid") && price == null) ||
