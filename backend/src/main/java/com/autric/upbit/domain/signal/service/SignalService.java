@@ -77,7 +77,7 @@ public class SignalService {
      */
     @Transactional(readOnly = true)
     public SignalListResponse getSignalsByMemberWithFilters(
-            Long memberId, int page, int size,
+            int page, int size,
             String market, LocalDate startDate, LocalDate endDate, Long strategyId) {
 
         // LocalDate를 LocalDateTime으로 변환

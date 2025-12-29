@@ -27,7 +27,6 @@ public class SignalController {
      */
     @GetMapping
     public ResponseEntity<?> getSignalLogs(
-            @AuthenticationPrincipal CustomOAuth2User user,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(required = false) String market,
@@ -35,7 +34,7 @@ public class SignalController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
             @RequestParam(required = false) Long strategyId) {
         SignalListResponse response = signalService.getSignalsByMemberWithFilters(
-                user.getMember().getId(), page, size, market, startDate, endDate, strategyId);
+                page, size, market, startDate, endDate, strategyId);
         return SuccessResponse.createSuccess(SuccessCode.SIGNAL_LIST_SUCCESS, response);
     }
 }

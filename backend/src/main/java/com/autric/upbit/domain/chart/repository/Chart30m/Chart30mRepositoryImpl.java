@@ -26,4 +26,21 @@ public class Chart30mRepositoryImpl implements Chart30mRepositoryCustom{
                 .limit(limit)
                 .fetch();
     }
+
+    @Override
+    public List<Chart30m> findByMarketBefore(String marketCode, Long beforeTimestamp, int limit) {
+        QChart30m c = QChart30m.chart30m;
+        QMarket m = QMarket.market;
+
+        return queryFactory
+                .selectFrom(c)
+                .join(c.market, m).fetchJoin()
+                .where(
+                        c.market.coin.eq(marketCode),
+                        c.timestamp.lt(beforeTimestamp)
+                )
+                .orderBy(c.candleDateTimeKst.desc())
+                .limit(limit)
+                .fetch();
+    }
 }

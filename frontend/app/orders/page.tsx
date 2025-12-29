@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { AlertTriangle, Loader2, Key, Zap } from "lucide-react"
 import { AuthGuard, MobileDataCard, MobileCardGrid } from "@/components/common"
+import { SignalChart } from "@/components/chart/SignalChart"
 import { useUser } from "@/hooks/queries/useUser"
 import { useOrders } from "@/hooks/queries/useOrders"
 import { useRelatedSignal } from "@/hooks/queries/useRelatedSignals"
@@ -453,6 +454,10 @@ export default function OrdersPage() {
             {/* TAB: 시그널 로그 */}
             <TabsContent value="signals" className="space-y-4">
               <div ref={signalsTopRef} className="scroll-mt-20" /> {/* 스크롤 앵커 */}
+              
+              {/* 시그널 차트 */}
+              <SignalChart signals={signalData?.signals} />
+
               <Card>
                 <CardHeader>
                   <CardTitle>시그널 로그</CardTitle>

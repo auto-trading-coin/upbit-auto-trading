@@ -59,4 +59,10 @@ export const queryKeys = {
     list: () => [...queryKeys.strategies.all, 'list'] as const,
     detail: (id: number) => [...queryKeys.strategies.all, id] as const,
   },
+
+  // 차트 데이터
+  chart: {
+    all: ['chart'] as const,
+    data: (market: string, unit: number) => [...queryKeys.chart.all, market, unit] as const,
+  },
 } as const

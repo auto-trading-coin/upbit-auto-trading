@@ -58,7 +58,12 @@ public enum SuccessCode implements ResponseCode {
     /*
      * Portfolio / Profit
      */
-    GET_PROFIT_SUCCESS(HttpStatus.OK, "투자손익 조회에 성공했습니다.");
+    GET_PROFIT_SUCCESS(HttpStatus.OK, "투자손익 조회에 성공했습니다."),
+
+    /*
+     * Chart
+     */
+    CHART_DATA_SUCCESS(HttpStatus.OK, "차트 데이터 조회에 성공했습니다.");
 
     private final HttpStatus httpStatus;
     private final String message;

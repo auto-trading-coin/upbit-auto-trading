@@ -7,6 +7,7 @@ import com.querydsl.jpa.impl.JPAQueryFactory;
 import lombok.RequiredArgsConstructor;
 
 import java.util.List;
+
 @RequiredArgsConstructor
 public class Chart60mRepositoryImpl implements Chart60mRepositoryCustom{
 
@@ -21,6 +22,23 @@ public class Chart60mRepositoryImpl implements Chart60mRepositoryCustom{
                 .selectFrom(c)
                 .join(c.market, m).fetchJoin()
                 .where(c.market.coin.eq(marketCode))
+                .orderBy(c.candleDateTimeKst.desc())
+                .limit(limit)
+                .fetch();
+    }
+
+    @Override
+    public List<Chart60m> findByMarketBefore(String marketCode, Long beforeTimestamp, int limit) {
+        QChart60m c = QChart60m.chart60m;
+        QMarket m = QMarket.market;
+
+        return queryFactory
+                .selectFrom(c)
+                .join(c.market, m).fetchJoin()
+                .where(
+                        c.market.coin.eq(marketCode),
+                        c.timestamp.lt(beforeTimestamp)
+                )
                 .orderBy(c.candleDateTimeKst.desc())
                 .limit(limit)
                 .fetch();

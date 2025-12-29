@@ -6,9 +6,7 @@ import java.util.List;
 
 public interface Chart30mRepositoryCustom {
 
-    /**
-     * 지정된 마켓의 최신 limit개
-     * candleDateTimeKst DESC 순으로 조회
-     */
     List<Chart30m> findLatestByMarket(String marketCode, int limit);
+
+    List<Chart30m> findByMarketBefore(String marketCode, Long beforeTimestamp, int limit);
 }

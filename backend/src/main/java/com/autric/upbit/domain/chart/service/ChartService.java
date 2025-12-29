@@ -30,7 +30,7 @@ public class ChartService {
      * marketCode + unit + limit 에 따라
      * 각 Repository 의 findLatestByMarket() 을 호출합니다.
      */
-    public List<ChartResponse> fetchLatest( String marketCode, int unit, int limit) {
+    public List<ChartResponse> fetchLatest(String marketCode, int unit, int limit) {
         return switch (unit) {
             case 1 -> chart1mRepository.findLatestByMarket(marketCode, limit)
                     .stream().map(e -> ChartResponse.fromEntity(e, 1)).toList();
@@ -48,5 +48,24 @@ public class ChartService {
         };
     }
 
-
+    /**
+     * 특정 timestamp 이전의 차트 데이터 조회 (무한 스크롤용)
+     */
+    public List<ChartResponse> fetchBefore(String marketCode, int unit, Long beforeTimestamp, int limit) {
+        return switch (unit) {
+            case 1 -> chart1mRepository.findByMarketBefore(marketCode, beforeTimestamp, limit)
+                    .stream().map(e -> ChartResponse.fromEntity(e, 1)).toList();
+            case 5 -> chart5mRepository.findByMarketBefore(marketCode, beforeTimestamp, limit)
+                    .stream().map(e -> ChartResponse.fromEntity(e, 5)).toList();
+            case 30 -> chart30mRepository.findByMarketBefore(marketCode, beforeTimestamp, limit)
+                    .stream().map(e -> ChartResponse.fromEntity(e, 30)).toList();
+            case 60 -> chart60mRepository.findByMarketBefore(marketCode, beforeTimestamp, limit)
+                    .stream().map(e -> ChartResponse.fromEntity(e, 60)).toList();
+            case 240 -> chart240mRepository.findByMarketBefore(marketCode, beforeTimestamp, limit)
+                    .stream().map(e -> ChartResponse.fromEntity(e, 240)).toList();
+            case 1440 -> chart1dRepository.findByMarketBefore(marketCode, beforeTimestamp, limit)
+                    .stream().map(e -> ChartResponse.fromEntity(e, 1440)).toList();
+            default -> throw new IllegalArgumentException("지원하지 않는 unit: " + unit);
+        };
+    }
 }
