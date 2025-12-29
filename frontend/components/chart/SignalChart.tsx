@@ -1,7 +1,7 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
-import { createChart, ColorType, CandlestickSeries, createSeriesMarkers } from "lightweight-charts"
+import { useEffect, useRef, useState, useMemo } from "react"
+import { createChart, ColorType, CandlestickSeries, createSeriesMarkers, UTCTimestamp, SeriesMarkerPosition, SeriesMarkerShape } from "lightweight-charts"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
@@ -10,12 +10,9 @@ import { Loader2, TrendingUp } from "lucide-react"
 import { getChartData, CHART_LOAD_LIMIT } from "@/app/api/chart"
 import { usePortfolio } from "@/hooks/queries/usePortfolio"
 import { useSignals } from "@/hooks/queries/useSignals"
-import { useStrategies } from "@/hooks/queries/useStrategies"
-import { Signal } from "@/types"
 import { ChartCandle } from "@/types/chart"
 
 interface SignalChartProps {
-  signals?: Signal[]
   initialMarket?: string
 }
 
@@ -44,10 +41,11 @@ const TIMEFRAMES = [
   { value: "1440", label: "1일" },
 ]
 
-// KST 문자열을 Unix timestamp(초)로 변환
-const kstToTimestamp = (kstString: string): number => {
+// KST 문자열을 Unix timestamp(초)로 변환 - KST 표시를 위해 9시간 추가
+const kstToTimestamp = (kstString: string): UTCTimestamp => {
   const date = new Date(kstString)
-  return Math.floor(date.getTime() / 1000)
+  // lightweight-charts는 UTC로 표시하므로, KST 표시를 위해 9시간(32400초) 추가
+  return (Math.floor(date.getTime() / 1000) + 32400) as UTCTimestamp
 }
 
 // 숫자 포맷 (천 단위 콤마)
@@ -60,7 +58,7 @@ const formatDateForApi = (date: Date): string => {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`
 }
 
-export function SignalChart({ signals: propSignals = [], initialMarket = "KRW-BTC" }: SignalChartProps) {
+export function SignalChart({ initialMarket = "KRW-BTC" }: SignalChartProps) {
   const chartContainerRef = useRef<HTMLDivElement>(null)
   const chartRef = useRef<any>(null)
   const candlestickSeriesRef = useRef<any>(null)
@@ -96,17 +94,16 @@ export function SignalChart({ signals: propSignals = [], initialMarket = "KRW-BT
     }
   })
   
-  // 전략 목록
-  const { data: strategies } = useStrategies()
-  
   // 현재 선택된 마켓의 보유 정보
   const currentHolding = portfolio?.holdings?.find(h => h.market === market)
   
-  // 전략 필터 적용된 시그널
-  const filteredSignals = (signalData?.signals?.filter(s => {
-    if (selectedStrategy !== "all" && s.strategy !== selectedStrategy) return false
-    return true
-  }) || [])
+  // 전략 필터 적용된 시그널 (메모이제이션)
+  const filteredSignals = useMemo(() => {
+    return signalData?.signals?.filter(s => {
+      if (selectedStrategy !== "all" && s.strategy !== selectedStrategy) return false
+      return true
+    }) || []
+  }, [signalData?.signals, selectedStrategy])
   
   // ref로 관리 (클로저 문제 해결)
   const allCandlesRef = useRef<ChartCandle[]>([])
@@ -225,7 +222,6 @@ export function SignalChart({ signals: propSignals = [], initialMarket = "KRW-BT
       
       try {
         const data = await getChartData(market, unit, CHART_LOAD_LIMIT, oldestTimestampRef.current)
-        console.log("추가 데이터 로드:", data.length, "개")
         
         if (data.length === 0) {
           hasMoreDataRef.current = false
@@ -269,7 +265,6 @@ export function SignalChart({ signals: propSignals = [], initialMarket = "KRW-BT
       setIsLoading(true)
       try {
         const data = await getChartData(market, unit, CHART_LOAD_LIMIT)
-        console.log("초기 데이터 로드:", data.length, "개")
         
         allCandlesRef.current = data
         
@@ -399,11 +394,12 @@ export function SignalChart({ signals: propSignals = [], initialMarket = "KRW-BT
       })
 
       if (closestCandle) {
+        const candle = closestCandle as ChartCandle  // 타입 단언
         return {
-          time: kstToTimestamp(closestCandle.candle_date_time_kst) as any,
-          position: signal.side === "bid" ? "belowBar" : "aboveBar",
+          time: kstToTimestamp(candle.candle_date_time_kst),
+          position: (signal.side === "bid" ? "belowBar" : "aboveBar") as SeriesMarkerPosition,
           color: signal.side === "bid" ? "#16a34a" : "#dc2626", // green-600 / red-600
-          shape: signal.side === "bid" ? "arrowUp" : "arrowDown",
+          shape: (signal.side === "bid" ? "arrowUp" : "arrowDown") as SeriesMarkerShape,
           text: signal.side === "bid" ? "B" : "S",
         }
       }
@@ -422,18 +418,18 @@ export function SignalChart({ signals: propSignals = [], initialMarket = "KRW-BT
       return acc
     }, [])
 
-    console.log("마커 생성:", uniqueMarkers.length, "개 (시그널:", filteredSignals.length, "개)")
-    
     // createSeriesMarkers 사용
     if (uniqueMarkers.length > 0) {
       markersRef.current = createSeriesMarkers(candlestickSeriesRef.current, uniqueMarkers)
     }
-  }, [filteredSignals, showMarkers, selectedStrategy, isLoading, chartDateRange])
+  }, [filteredSignals, showMarkers])
 
-  // 시그널에서 사용된 전략 목록 (중복 제거)
-  const usedStrategies = Array.from(
-    new Set(signalData?.signals?.map(s => s.strategy) || [])
-  )
+  // 시그널에서 사용된 전략 목록 (중복 제거, 메모이제이션)
+  const usedStrategies = useMemo(() => {
+    return Array.from(
+      new Set(signalData?.signals?.map(s => s.strategy) || [])
+    )
+  }, [signalData?.signals])
 
   return (
     <Card className="w-full">
