@@ -21,6 +21,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ko" suppressHydrationWarning>
+      <head>
+        <link rel="icon" href="/favicon.ico" />
+      </head>
       <body className={inter.className}>
         <QueryClientProvider client={queryClient}>
           <WebSocketProvider>
@@ -30,7 +33,7 @@ export default function RootLayout({
                   <Navbar />
                   <main className="flex-1 container mx-auto py-6 px-4">{children}</main>
                   <footer className="border-t py-4 text-center text-sm text-muted-foreground">
-                    © {new Date().getFullYear()} 업비트 자동매매 시스템
+                    © {new Date().getFullYear()} Ubot
                   </footer>
                 </div>
                 <Toaster />

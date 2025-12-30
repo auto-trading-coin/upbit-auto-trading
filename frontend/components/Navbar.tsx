@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { LoginModal } from "@/components/LoginModal"
 import { useState, useCallback } from "react"
-import { BarChart3, CreditCard, Home, LineChart, ListOrdered, Menu, Settings, User } from "lucide-react"
+import { BarChart3, Home, LineChart, ListOrdered, Menu, Settings, User } from "lucide-react"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 
 export default function Navbar() {
@@ -21,6 +21,7 @@ export default function Navbar() {
   const router = useRouter()
   const { user, isAuthenticated, logout } = useAuth()
   const [showLoginModal, setShowLoginModal] = useState(false)
+  const [sheetOpen, setSheetOpen] = useState(false)
 
   const navItems = [
     { name: "대시보드", href: "/", icon: <Home className="h-4 w-4" /> },
@@ -40,9 +41,9 @@ export default function Navbar() {
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 flex justify-center">
-      <div className="w-full max-w-screen-xl px-4 sm:px-6 lg:px-8 flex h-16 items-center justify-between">
+      <div className="container mx-auto px-4 flex h-16 items-center justify-between">
         <div className="flex items-center">
-          <Sheet>
+          <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
             <SheetTrigger asChild className="mr-2 md:hidden">
               <Button variant="ghost" size="icon" className="md:hidden">
                 <Menu className="h-5 w-5" />
@@ -51,15 +52,15 @@ export default function Navbar() {
             </SheetTrigger>
             <SheetContent side="left" className="w-[240px] sm:w-[300px]">
               <div className="flex flex-col gap-6 py-4">
-                <Link href="/" className="flex items-center space-x-2">
-                  <CreditCard className="h-6 w-6" />
-                  <span className="font-bold">업비트 자동매매</span>
+                <Link href="/" className="flex items-center" onClick={() => setSheetOpen(false)}>
+                  <img src="/ubot_logo.png" alt="Ubot" className="h-8" />
                 </Link>
                 <nav className="flex flex-col space-y-2">
                   {navItems.map((item) => (
                     <Link
                       key={item.href}
                       href={item.href}
+                      onClick={() => setSheetOpen(false)}
                       className={`flex items-center rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground ${
                         pathname === item.href ? "bg-accent text-accent-foreground" : "text-muted-foreground"
                       }`}
@@ -73,9 +74,8 @@ export default function Navbar() {
             </SheetContent>
           </Sheet>
 
-          <Link href="/" className="flex items-center space-x-2">
-            <CreditCard className="h-6 w-6" />
-            <span className="font-bold">업비트 자동매매</span>
+          <Link href="/" className="flex items-center">
+            <img src="/ubot_logo.png" alt="Ubot" className="h-8" />
           </Link>
         </div>
 
