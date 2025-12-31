@@ -177,7 +177,7 @@ export default function MyPage() {
                     className="inline-flex items-center gap-1 rounded bg-muted px-1.5 py-0.5 text-xs font-medium text-primary hover:bg-muted/80 transition-colors cursor-pointer border border-border"
                     title="IP 주소 복사하기"
                   >
-                    138.2.121.218 (autric server IP)
+                    138.2.121.218 (Ubot server IP)
                     <Copy className="h-3 w-3" />
                   </button>{" "}
                   입력합니다.
