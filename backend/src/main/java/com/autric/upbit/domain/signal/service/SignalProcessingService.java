@@ -69,7 +69,15 @@ public class SignalProcessingService {
                 List<UpbitAccountResponse> accounts = upbitApiClient.getAccounts(apiKey.getAccessKey(),
                         apiKey.getSecretKey());
 
-                String price = upbitOrderCalculatorService.getPrice(accounts);
+                // 매수 시그널인데 이미 해당 코인을 보유 중이면 스킵
+                if (msg.getSide().equals("bid") && isAlreadyHolding(accounts, msg.getMarket())) {
+                    log.info("Member {} - 이미 진입 중인 코인, 매수 스킵: {}", m.getId(), msg.getMarket());
+                    continue;
+                }
+
+                // 다중 코인 진입을 위한 주문 금액 계산 (Market 테이블 기준)
+                List<String> targetCoins = marketService.getAllCoins();
+                String price = upbitOrderCalculatorService.getPrice(accounts, targetCoins);
                 String volume = upbitOrderCalculatorService.getVolume(accounts, msg.getMarket(), curPrice);
 
                 // 주문 자산이 부족(5천원 미만)하거나, 매도 수량이 부족할 경우 continue
@@ -134,5 +142,28 @@ public class SignalProcessingService {
             }
 
         }
+    }
+
+    /**
+     * 해당 코인을 이미 보유 중인지 확인
+     *
+     * @param accounts 업비트 계좌 잔고
+     * @param market 확인할 마켓 (ex: KRW-BTC)
+     * @return 보유 중이면 true
+     */
+    private boolean isAlreadyHolding(List<UpbitAccountResponse> accounts, String market) {
+        String targetCurrency = market.split("-")[1];  // KRW-BTC → BTC
+
+        for (UpbitAccountResponse account : accounts) {
+            if (targetCurrency.equals(account.getCurrency())) {
+                BigDecimal balance = new BigDecimal(account.getBalance());
+                BigDecimal locked = new BigDecimal(account.getLocked() == null ? "0" : account.getLocked());
+                BigDecimal total = balance.add(locked);
+
+                // 잔고가 0보다 크면 보유 중
+                return total.compareTo(BigDecimal.ZERO) > 0;
+            }
+        }
+        return false;
     }
 }
