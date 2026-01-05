@@ -147,4 +147,21 @@ public class UpbitCandleResponse {
         return LocalDateTime.parse(this.candleDateTimeKst);
     }
 
+    /**
+     * ChartResponse DTO로 변환
+     */
+    public com.autric.upbit.domain.chart.dto.response.ChartResponse toChartResponse(String marketCode, int unit) {
+        return com.autric.upbit.domain.chart.dto.response.ChartResponse.builder()
+                .market(marketCode)
+                .candleDateTimeKst(parseCandleDateTimeKst())
+                .openingPrice(openingPrice)
+                .highPrice(highPrice)
+                .lowPrice(lowPrice)
+                .tradePrice(tradePrice)
+                .timestamp(timestamp)
+                .candleAccTradePrice(candleAccTradePrice)
+                .candleAccTradeVolume(candleAccTradeVolume)
+                .unit(unit)
+                .build();
+    }
 }

@@ -1,5 +1,6 @@
 package com.autric.upbit.domain.chart.sync;
 
+import com.autric.upbit.domain.chart.dto.response.ChartResponse;
 import com.autric.upbit.domain.chart.entity.ChartSyncMeta;
 import com.autric.upbit.domain.chart.entity.Market;
 import com.autric.upbit.domain.chart.repository.ChartSyncMetaRepository;
@@ -11,6 +12,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 /**
@@ -35,19 +38,31 @@ public class ChartDeltaSyncExecutor {
     private final ChartPersistHelper persistHelper;
     private final ChartSyncMetaRepository chartSyncMetaRepository;
 
+    /**
+     * Delta Sync 실행 결과
+     */
+    public record DeltaSyncResult(int savedCount, List<ChartResponse> savedCandles) {
+        public static DeltaSyncResult empty() {
+            return new DeltaSyncResult(0, List.of());
+        }
+    }
+
     @Transactional
-    public int execute(ChartSyncMeta syncMeta, Market market, int unit) {
+    public DeltaSyncResult execute(ChartSyncMeta syncMeta, Market market, int unit) {
         final int count = 200;
 
         LocalDateTime lastSyncedAt = syncMeta.getLastSyncedAt();
         if (lastSyncedAt == null) {
-            return 0;
+            return DeltaSyncResult.empty();
         }
 
-        LocalDateTime toTime = LocalDateTime.now(); // 현재 시각 부터 동기화 하도록 설정
-        LocalDateTime maxSyncedAt = lastSyncedAt; // 최대 maxSyncedAt까지 동기화
-        LocalDateTime deltaSyncedLatestTime = null; // 동기화된 캔들의 가장 최신 시각 기억
+        LocalDateTime toTime = LocalDateTime.now();
+        LocalDateTime maxSyncedAt = lastSyncedAt;
+        LocalDateTime deltaSyncedLatestTime = null;
         int totalSyncedCount = 0;
+
+        // 저장된 캔들 수집 (최신순으로 정렬하기 위해)
+        List<ChartResponse> allSavedCandles = new ArrayList<>();
 
         while (true) {
             List<UpbitCandleResponse> responseList = (unit == 1440)
@@ -59,20 +74,26 @@ public class ChartDeltaSyncExecutor {
                 break;
             }
 
-            // 중복 제거 (lastSyncedAt 이후 캔들만) + 완성된 캔들만 필터링
             LocalDateTime now = LocalDateTime.now();
-            int candleMinutes = (unit == 1440) ? 1440 : unit;
 
             // 필터조건 :
             // 1. 가장최신 싱크된 캔들 이후의 캔들만 저장
             // 2. 미완성된 가장 최신캔들 1개 제외
             List<UpbitCandleResponse> filtered = responseList.stream()
                     .filter(candle -> candle.getParsedDateTime().isAfter(maxSyncedAt))
-                    .filter(candle -> candle.getParsedDateTime().plusMinutes(candleMinutes).isBefore(now))
+                    .filter(candle -> candle.getParsedDateTime().plusMinutes(unit).isBefore(now))
                     .toList();
 
             // 차트 데이터 DB저장
-            totalSyncedCount += persistHelper.persistByUnit(filtered, market, unit);
+            int savedCount = persistHelper.persistByUnit(filtered, market, unit);
+            totalSyncedCount += savedCount;
+
+            // 저장된 캔들을 ChartResponse로 변환하여 수집
+            List<ChartResponse> savedCandles = filtered.stream()
+                    .limit(savedCount)
+                    .map(candle -> candle.toChartResponse(market.getCoin(), unit))
+                    .toList();
+            allSavedCandles.addAll(savedCandles);
 
             // 가장 최근 데이터 기준 시각 기억 (완성된 캔들 중에서)
             if (deltaSyncedLatestTime == null && !filtered.isEmpty()) {
@@ -104,6 +125,11 @@ public class ChartDeltaSyncExecutor {
             chartSyncMetaRepository.save(syncMeta);
         }
 
-        return totalSyncedCount;
+        // 최신순 정렬 후 반환
+        List<ChartResponse> sortedCandles = allSavedCandles.stream()
+                .sorted(Comparator.comparing(ChartResponse::getTimestamp).reversed())
+                .toList();
+
+        return new DeltaSyncResult(totalSyncedCount, sortedCandles);
     }
 }

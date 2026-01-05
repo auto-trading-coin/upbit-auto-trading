@@ -3,8 +3,9 @@ package com.autric.upbit.domain.chart.service;
 import com.autric.upbit.domain.chart.entity.ChartSyncMeta;
 import com.autric.upbit.domain.chart.entity.Market;
 import com.autric.upbit.domain.chart.repository.ChartSyncMetaRepository;
-import com.autric.upbit.domain.chart.sync.ChartFullSyncExecutor;
 import com.autric.upbit.domain.chart.sync.ChartDeltaSyncExecutor;
+import com.autric.upbit.domain.chart.sync.ChartDeltaSyncExecutor.DeltaSyncResult;
+import com.autric.upbit.domain.chart.sync.ChartFullSyncExecutor;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -47,18 +48,16 @@ public class ChartSyncService {
      * Full Sync 실행
      */
     public int fullSync(ChartSyncMeta syncMeta, Market market, int unit) {
-        log.info("FullSync 실행 시작 → Market: {}, Unit: {}", market.getCoin(), unit);
-
+        log.info("FullSync 실행 시작 - Market: {}, Unit: {}", market.getCoin(), unit);
         return chartFullSyncExecutor.execute(syncMeta, market, unit);
     }
 
     /**
      * Delta Sync 실행
+     *
+     * @return DeltaSyncResult (저장 개수 + 저장된 캔들 리스트)
      */
-    public int deltaSync(ChartSyncMeta syncMeta, Market market, int unit) {
-        int count = chartDeltaSyncExecutor.execute(syncMeta, market, unit);
-
-        // log.info("DeltaSync {}건 저장 완료 → Market: {}, Unit: {} ",count, market.getCoin(), unit);
-        return count;
+    public DeltaSyncResult deltaSync(ChartSyncMeta syncMeta, Market market, int unit) {
+        return chartDeltaSyncExecutor.execute(syncMeta, market, unit);
     }
 }

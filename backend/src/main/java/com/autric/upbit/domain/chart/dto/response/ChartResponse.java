@@ -51,7 +51,6 @@ public class ChartResponse {
 
     public static ChartResponse fromEntity(ChartBase base, int unit) {
         return ChartResponse.builder()
-                .id(base.getId())
                 .market(base.getMarket().getCoin())
                 .candleDateTimeKst(base.getCandleDateTimeKst())
                 .openingPrice(base.getOpeningPrice())
