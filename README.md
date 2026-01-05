@@ -144,16 +144,7 @@
 > 카카오 소셜 로그인을 통해 서비스에 접속하고, 자동매매 상태를 한눈에 확인합니다.
 
 ---
-
-### 2. 실시간 시세 모니터링
-
-![markets_websocket](./exec/images/markets_websocket.png)
-
-> 업비트 WebSocket을 통해 실시간 시세를 모니터링합니다. 현재가, 변동률, 거래량을 실시간으로 확인할 수 있습니다.
-
----
-
-### 3. 전략 선택 및 자동매매 설정
+### 2. 전략 선택 및 자동매매 설정
 
 ![strategies](./exec/images/strategies.png)
 
@@ -161,22 +152,15 @@
 
 ---
 
-### 4. 포트폴리오
+### 3. 실시간 시세 모니터링
 
-#### 자산 현황
-![portfolio](./exec/images/portfolio_portfolio.png)
+![markets_websocket](./exec/images/markets_websocket.png)
 
-#### 투자 통계
-![statistics](./exec/images/portfolio_statistics.png)
-
-#### 계좌 내역
-![accounthistory](./exec/images/portfolio_accounthistory.png)
-
-> 보유 자산 현황, 수익률 통계, 계좌 입출금 내역을 확인합니다.
+> 업비트 WebSocket을 통해 실시간 시세를 모니터링합니다. 현재가, 변동률, 거래량을 실시간으로 확인할 수 있습니다.
 
 ---
 
-### 5. 주문 내역
+### 4. 주문 및 시그널 내역
 
 #### 주문 로그
 ![orderlog](./exec/images/orders_orderlog.png)
@@ -185,6 +169,22 @@
 ![signallog](./exec/images/orders_signallog.png)
 
 > 자동매매로 생성된 시그널을 차트형태로 확인하며 체결된 주문 이력을 조회합니다.
+
+---
+
+### 5. 포트폴리오
+
+#### 자산 현황
+![portfolio](./exec/images/portfolio_portfolio.png)
+
+#### 계좌 내역
+![accounthistory](./exec/images/portfolio_accounthistory.png)
+
+#### 투자 통계
+![statistics](./exec/images/portfolio_statistics.png)
+
+
+> 보유 자산 현황, 수익률 통계, 계좌 입출금 내역을 확인합니다.
 
 </details>
 
