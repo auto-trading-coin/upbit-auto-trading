@@ -106,12 +106,12 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
               if (item.market === data.code) {
                 return {
                   ...item,
-                  currentPrice: data.trade_price,
-                  change: data.change as ChangeType,
-                  changeRate: data.change_rate * 100,
-                  changePrice: data.change_price,
-                  accTradePrice24h: data.acc_trade_price_24h,
-                  accTradeVolume24h: data.acc_trade_volume_24h,
+                  currentPrice: data.trade_price ?? item.currentPrice,
+                  change: data.change as ChangeType ?? item.change,
+                  changeRate: data.change_rate != null ? data.change_rate * 100 : item.changeRate,
+                  changePrice: data.change_price ?? item.changePrice,
+                  accTradePrice24h: data.acc_trade_price_24h ?? item.accTradePrice24h,
+                  accTradeVolume24h: data.acc_trade_volume_24h ?? item.accTradeVolume24h,
                 }
               }
               return item

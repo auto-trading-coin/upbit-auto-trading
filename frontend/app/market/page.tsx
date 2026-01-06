@@ -211,21 +211,21 @@ export default function MarketPage() {
               rows={[
                 {
                   label: '현재가',
-                  value: `${item.currentPrice.toLocaleString()}원`,
+                  value: `${(item.currentPrice ?? 0).toLocaleString()}원`,
                   valueClassName: colorClass,
                 },
                 {
                   label: '변동가',
-                  value: `${changeSign}${item.changePrice.toLocaleString()}`,
+                  value: `${changeSign}${(item.changePrice ?? 0).toLocaleString()}`,
                   valueClassName: colorClass,
                 },
                 {
                   label: '거래대금(24h)',
-                  value: formatPrice(item.accTradePrice24h),
+                  value: formatPrice(item.accTradePrice24h ?? 0),
                 },
                 {
                   label: '거래량(24h)',
-                  value: formatVolume(item.accTradeVolume24h),
+                  value: formatVolume(item.accTradeVolume24h ?? 0),
                 },
               ]}
             />
@@ -328,7 +328,7 @@ export default function MarketPage() {
                   : ""
               }`}
             >
-              {item.currentPrice.toLocaleString()}원
+              {(item.currentPrice ?? 0).toLocaleString()}원
             </div>
             <div className="text-right flex items-center justify-end gap-1">
               {renderChangeIcon(item.change)}
@@ -341,7 +341,7 @@ export default function MarketPage() {
                     : ""
                 }
               >
-                {item.change === 'RISE' ? '+' : item.change === 'FALL' ? '-' : ''}{item.changeRate.toFixed(2)}%
+                {item.change === 'RISE' ? '+' : item.change === 'FALL' ? '-' : ''}{(item.changeRate ?? 0).toFixed(2)}%
               </span>
             </div>
             <div
@@ -353,13 +353,13 @@ export default function MarketPage() {
                   : ""
               }`}
             >
-              {item.change === 'RISE' ? '+' : item.change === 'FALL' ? '-' : ''}{item.changePrice.toLocaleString()}
+              {item.change === 'RISE' ? '+' : item.change === 'FALL' ? '-' : ''}{(item.changePrice ?? 0).toLocaleString()}
             </div>
             <div className="text-right text-sm">
-              {formatPrice(item.accTradePrice24h)}
+              {formatPrice(item.accTradePrice24h ?? 0)}
             </div>
             <div className="text-right text-sm">
-              {formatVolume(item.accTradeVolume24h)}
+              {formatVolume(item.accTradeVolume24h ?? 0)}
             </div>
             <div className="flex items-center justify-center">
               <Badge variant="outline" className="cursor-pointer hover:bg-muted">
