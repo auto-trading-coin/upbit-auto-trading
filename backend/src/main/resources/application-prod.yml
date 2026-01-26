@@ -4,6 +4,9 @@ spring:
     url: jdbc:mysql://${DATABASE_URL_PROD}/${DATABASE}?serverTimezone=Asia/Seoul
     username: ${MYSQL_ID_PROD}
     password: ${MYSQL_PASSWORD_PROD}
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 10
 
   data:
     redis:
