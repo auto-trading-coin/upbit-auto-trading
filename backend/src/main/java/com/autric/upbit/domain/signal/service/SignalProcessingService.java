@@ -77,11 +77,8 @@ public class SignalProcessingService {
      */
     private void processOrderForMember(Member member, SignalMessage msg,
             Market market, Signals signal, BigDecimal curPrice) {
+        // join fetch로 API Key가 있는 회원만 조회되므로 null 체크 불필요
         UpbitApiKey apiKey = member.getUpbitApiKey();
-        if (apiKey == null) {
-            log.warn("Member {} has no API key", member.getId());
-            return;
-        }
 
         try {
             List<UpbitAccountResponse> accounts = upbitApiClient.getAccounts(
@@ -159,7 +156,7 @@ public class SignalProcessingService {
      */
     private UpbitOrderResponse pollOrderUntilDone(String accessKey, String secretKey, String uuid) {
         int maxAttempts = 10;
-        int delayMs = 50;  // 폴링으로 인해 최대 500ms(10*50) 지연 발생 가능
+        int delayMs = 50; // 폴링으로 인해 최대 500ms(10*50) 지연 발생 가능
 
         for (int i = 0; i < maxAttempts; i++) {
             UpbitOrderResponse order = upbitApiClient.getOrder(accessKey, secretKey, uuid);
